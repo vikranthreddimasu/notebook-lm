@@ -10,10 +10,46 @@ import type {
   ChatMessage,
 } from './types';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000/api';
+declare global {
+  interface Window {
+    notebookBridge?: {
+      ping: () => Promise<string>;
+      choosePath: (options?: Record<string, unknown>) => Promise<string | null>;
+      openExternal: (url: string) => Promise<boolean>;
+      backendUrl: () => Promise<string>;
+      onBackendReady: (callback: (url: string) => void) => void;
+    };
+  }
+}
+
+const DEFAULT_API_BASE = 'http://127.0.0.1:8000/api';
+
+let resolvedApiBase: string | null = null;
+
+async function getApiBase(): Promise<string> {
+  if (resolvedApiBase) return resolvedApiBase;
+
+  // In Electron, get the backend URL from the main process
+  if (window.notebookBridge?.backendUrl) {
+    try {
+      const url = await window.notebookBridge.backendUrl();
+      if (url) {
+        resolvedApiBase = `${url}/api`;
+        return resolvedApiBase;
+      }
+    } catch (_) {
+      // Fall through to default
+    }
+  }
+
+  // Fallback: env var or default
+  resolvedApiBase = import.meta.env.VITE_API_BASE_URL ?? DEFAULT_API_BASE;
+  return resolvedApiBase;
+}
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const apiBase = await getApiBase();
+  const response = await fetch(`${apiBase}${path}`, {
     headers: {
       'Content-Type': 'application/json',
       ...init?.headers,
@@ -45,13 +81,14 @@ export function sendChatMessage(body: ChatRequest): Promise<ChatResponse> {
 }
 
 export async function uploadDocument(file: File, notebookId?: string): Promise<IngestionResponse> {
+  const apiBase = await getApiBase();
   const formData = new FormData();
   formData.append('file', file);
   if (notebookId) {
     formData.append('notebook_id', notebookId);
   }
 
-  const response = await fetch(`${API_BASE_URL}/documents/ingest`, {
+  const response = await fetch(`${apiBase}/documents/ingest`, {
     method: 'POST',
     body: formData,
   });
@@ -68,19 +105,21 @@ export function listDocuments(notebookId: string): Promise<DocumentsListResponse
   return request<DocumentsListResponse>(`/documents/list?notebook_id=${encodeURIComponent(notebookId)}`);
 }
 
-export function getDocumentPreviewUrl(notebookId: string, sourcePath: string): string {
+export async function getDocumentPreviewUrl(notebookId: string, sourcePath: string): Promise<string> {
+  const apiBase = await getApiBase();
   const params = new URLSearchParams({
     notebook_id: notebookId,
     source_path: sourcePath,
   });
-  return `${API_BASE_URL}/documents/preview?${params.toString()}`;
+  return `${apiBase}/documents/preview?${params.toString()}`;
 }
 
 export async function streamChatMessage(
   body: ChatRequest,
   onEvent: (event: ChatStreamEvent) => void,
 ): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/chat/stream`, {
+  const apiBase = await getApiBase();
+  const response = await fetch(`${apiBase}/chat/stream`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -131,7 +170,8 @@ export async function streamChatMessage(
 }
 
 export async function exportConversation(title: string, messages: ChatMessage[]): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/export/conversation`, {
+  const apiBase = await getApiBase();
+  const response = await fetch(`${apiBase}/export/conversation`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -153,7 +193,8 @@ export async function exportConversation(title: string, messages: ChatMessage[])
 }
 
 export async function downloadNotebookSummaries(notebookId: string): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/export/notebook/${encodeURIComponent(notebookId)}`);
+  const apiBase = await getApiBase();
+  const response = await fetch(`${apiBase}/export/notebook/${encodeURIComponent(notebookId)}`);
   if (!response.ok) {
     throw new Error(`Export failed (${response.status})`);
   }
@@ -169,9 +210,10 @@ export async function downloadNotebookSummaries(notebookId: string): Promise<voi
 }
 
 export async function transcribeAudio(file: File): Promise<string> {
+  const apiBase = await getApiBase();
   const form = new FormData();
   form.append('audio', file);
-  const response = await fetch(`${API_BASE_URL}/speech/transcribe`, {
+  const response = await fetch(`${apiBase}/speech/transcribe`, {
     method: 'POST',
     body: form,
   });
@@ -183,7 +225,8 @@ export async function transcribeAudio(file: File): Promise<string> {
 }
 
 export async function speakText(text: string): Promise<string> {
-  const response = await fetch(`${API_BASE_URL}/speech/speak`, {
+  const apiBase = await getApiBase();
+  const response = await fetch(`${apiBase}/speech/speak`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text }),
