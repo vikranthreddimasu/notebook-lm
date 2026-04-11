@@ -64,11 +64,9 @@ a = Analysis(
     excludes=[
         "pytest",
         "pip",
-        "setuptools",
         "tkinter",
         "_tkinter",
         "unittest",
-        "distutils",
     ],
     noarchive=False,
     optimize=0,
