@@ -1,5 +1,5 @@
 // apps/desktop/electron/main.cjs
-const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, dialog, shell } = require('electron');
 const path = require('node:path');
 const net = require('node:net');
 const { spawn } = require('node:child_process');
@@ -169,7 +169,6 @@ ipcMain.handle('app:backendUrl', () => backendUrl);
 
 app.whenReady().then(async () => {
   const menu = buildMenu(checkForUpdates);
-  const { Menu } = require('electron');
   Menu.setApplicationMenu(menu);
 
   try {
