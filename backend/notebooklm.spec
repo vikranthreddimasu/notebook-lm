@@ -27,7 +27,24 @@ hidden_imports = (
     + collect_submodules("llama_index.core")
     + collect_submodules("llama_index.vector_stores.chroma")
     + collect_submodules("llama_index.llms.ollama")
+    + collect_submodules("chromadb.execution")
+    + collect_submodules("chromadb.segment")
+    + collect_submodules("chromadb.db")
+    + collect_submodules("chromadb.quota")
+    + collect_submodules("chromadb.rate_limit")
+    + collect_submodules("chromadb.ingest")
     + [
+        # ChromaDB dynamically loaded modules
+        "chromadb.execution.executor.local",
+        "chromadb.execution.executor.abstract",
+        "chromadb.api.segment",
+        "chromadb.db.impl.sqlite",
+        "chromadb.segment.impl.manager.local",
+        "chromadb.telemetry.product.posthog",
+        "chromadb.ingest.impl.simple_policy",
+        "chromadb.quota.simple_quota_enforcer",
+        "chromadb.rate_limit.simple_rate_limit",
+        # Other hidden imports
         "tiktoken_ext",
         "tiktoken_ext.openai_public",
         "numpy",
