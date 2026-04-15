@@ -73,3 +73,25 @@ export interface DocumentInfo {
 export interface DocumentsListResponse {
   documents: DocumentInfo[];
 }
+
+export interface Notebook {
+  notebook_id: string;
+  title: string;
+  description?: string;
+  source_count: number;
+  chunk_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SourceChunk {
+  source_path: string;
+  preview: string;
+  distance?: number | null;
+  document_name: string;
+  relevance_score?: number;
+}
+
+export interface CreateNotebookRequest {
+  title?: string;
+}

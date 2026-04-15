@@ -8,6 +8,7 @@ import type {
   MetricsSummary,
   AgentPlanResponse,
   ChatMessage,
+  Notebook,
 } from './types';
 
 declare global {
@@ -43,7 +44,7 @@ async function getApiBase(): Promise<string> {
   }
 
   // Fallback: env var or default
-  resolvedApiBase = import.meta.env.VITE_API_BASE_URL ?? DEFAULT_API_BASE;
+  resolvedApiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? DEFAULT_API_BASE;
   return resolvedApiBase;
 }
 
@@ -105,6 +106,23 @@ export function listDocuments(notebookId: string): Promise<DocumentsListResponse
   return request<DocumentsListResponse>(`/documents/list?notebook_id=${encodeURIComponent(notebookId)}`);
 }
 
+export function listNotebooks(): Promise<Notebook[]> {
+  return request<Notebook[]>('/notebooks/');
+}
+
+export function createNotebook(title?: string): Promise<Notebook> {
+  return request<Notebook>('/notebooks/', {
+    method: 'POST',
+    body: JSON.stringify({ title: title ?? 'New Notebook' }),
+  });
+}
+
+export function deleteNotebook(notebookId: string): Promise<{ status: string }> {
+  return request<{ status: string }>(`/notebooks/${encodeURIComponent(notebookId)}`, {
+    method: 'DELETE',
+  });
+}
+
 export async function getDocumentPreviewUrl(notebookId: string, sourcePath: string): Promise<string> {
   const apiBase = await getApiBase();
   const params = new URLSearchParams({
@@ -117,6 +135,7 @@ export async function getDocumentPreviewUrl(notebookId: string, sourcePath: stri
 export async function streamChatMessage(
   body: ChatRequest,
   onEvent: (event: ChatStreamEvent) => void,
+  signal?: AbortSignal,
 ): Promise<void> {
   const apiBase = await getApiBase();
   const response = await fetch(`${apiBase}/chat/stream`, {
@@ -125,6 +144,7 @@ export async function streamChatMessage(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(body),
+    signal,
   });
 
   if (!response.ok || !response.body) {

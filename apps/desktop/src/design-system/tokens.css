@@ -1,0 +1,125 @@
+:root {
+  /*
+   * "Lazy Scholar" — warm stone blacks with sage accent.
+   * Calm, generous, readable. The tool disappears, the content is everything.
+   */
+
+  /* Backgrounds — warm stone tones, not cold gray */
+  --color-bg-primary: #0c0a09;
+  --color-bg-secondary: #161412;
+  --color-bg-surface: #1c1917;
+  --color-bg-elevated: #262220;
+  --color-bg-hover: rgba(245, 240, 234, 0.04);
+  --color-bg-active: rgba(245, 240, 234, 0.07);
+
+  /* Borders — warm white base */
+  --color-border: rgba(245, 240, 234, 0.07);
+  --color-border-subtle: rgba(245, 240, 234, 0.04);
+  --color-border-hover: rgba(245, 240, 234, 0.14);
+
+  /* Text — warm off-whites, never pure white */
+  --color-text-primary: #f5f0ea;
+  --color-text-secondary: #a8a29e;
+  --color-text-muted: #57534e;
+
+  /* Accent — cool sage */
+  --color-accent: #7c9a82;
+  --color-accent-hover: #6a8a70;
+  --color-accent-subtle: rgba(124, 154, 130, 0.10);
+  --color-accent-glow: rgba(124, 154, 130, 0.15);
+
+  /* Status */
+  --color-success: #4ade80;
+  --color-error: #fb7185;
+  --color-warning: #fbbf24;
+
+  /* Shadows — warm black base */
+  --shadow-sm: 0 1px 2px rgba(10, 8, 6, 0.5);
+  --shadow-md: 0 4px 16px rgba(10, 8, 6, 0.45);
+  --shadow-lg: 0 12px 40px rgba(10, 8, 6, 0.55);
+  --shadow-inset: inset 0 1px 0 rgba(245, 240, 234, 0.03);
+  --shadow-glow: 0 0 24px rgba(124, 154, 130, 0.12);
+
+  /* Radius — Soft Pill system */
+  --radius-xs: 6px;
+  --radius-sm: 999px;
+  --radius-md: 999px;
+  --radius-lg: 999px;
+  --radius-xl: 20px;
+  --radius-card: 14px;
+  --radius-input: 999px;
+  --radius-textarea: 20px;
+  --radius-modal: 20px;
+
+  /* Spacing (4px base) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* Typography — system San Francisco on macOS */
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-mono: 'SF Mono', 'JetBrains Mono', 'Fira Code', monospace;
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 18px;
+  --text-xl: 24px;
+  --text-2xl: 32px;
+
+  /* Transitions */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast: 120ms;
+  --duration-normal: 200ms;
+  --duration-slow: 350ms;
+
+  /* Layout */
+  --sidebar-width: 240px;
+  --source-panel-width: 280px;
+  --titlebar-height: 52px;
+}
+
+/* Selection */
+::selection {
+  background: var(--color-accent-subtle);
+  color: var(--color-text-primary);
+}
+
+/* Scrollbar — warm tones, invisible until hovered */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+*:hover {
+  scrollbar-color: rgba(168, 162, 158, 0.15) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 3px;
+  transition: background-color 0.2s;
+}
+
+*:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(168, 162, 158, 0.12);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(168, 162, 158, 0.22);
+}

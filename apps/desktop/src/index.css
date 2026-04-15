@@ -1,16 +1,6 @@
-:root {
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-  color: rgba(253, 255, 255, 0.9);
-  background-color: #0a0c14;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
@@ -18,9 +8,29 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background-color: #0a0c14;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  font-weight: 400;
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  overflow: hidden;
 }
 
 a {
   color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+}
+
+/* Disable overscroll bounce for a tighter feel */
+html {
+  overscroll-behavior: none;
 }

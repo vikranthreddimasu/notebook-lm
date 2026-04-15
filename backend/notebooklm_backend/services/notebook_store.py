@@ -215,6 +215,11 @@ class NotebookStore:
             completed_at=now,
         )
 
+    def delete_notebook(self, notebook_id: str) -> None:
+        with self._connect() as conn:
+            conn.execute("DELETE FROM ingestion_jobs WHERE notebook_id = ?", (notebook_id,))
+            conn.execute("DELETE FROM notebooks WHERE notebook_id = ?", (notebook_id,))
+
     def list_jobs(self) -> list[IngestionJobStatus]:
         with self._connect() as conn:
             rows = conn.execute(
