@@ -5,6 +5,7 @@ import { SourcePanel } from './SourcePanel';
 import { ChatView } from '../chat/ChatView';
 import { getDocumentPreviewUrl } from '../../api';
 import DocumentPreview from '../../DocumentPreview';
+import { ToastContainer } from '../ui/Toast';
 import './layout.css';
 
 export function AppShell() {
@@ -40,6 +41,8 @@ export function AppShell() {
           filename={previewDocument.filename}
         />
       )}
+
+      <ToastContainer />
     </>
   );
 }
