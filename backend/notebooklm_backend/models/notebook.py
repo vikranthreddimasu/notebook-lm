@@ -23,6 +23,10 @@ class NotebookIngestionRequest(BaseModel):
     description: str | None = None
 
 
+class CreateNotebookRequest(BaseModel):
+    title: str = "New Notebook"
+
+
 class IngestionJobStatus(BaseModel):
     job_id: str
     notebook_id: str
