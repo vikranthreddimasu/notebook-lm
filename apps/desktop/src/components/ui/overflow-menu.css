@@ -7,8 +7,13 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   color: var(--color-text-muted);
-  font-size: var(--text-base);
-  padding: 4px 10px;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  height: 36px;
+  width: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   letter-spacing: 2px;
   transition: background var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out);
@@ -53,7 +58,7 @@
   color: var(--color-text-secondary);
   font-family: var(--font-sans);
   font-size: var(--text-sm);
-  padding: 8px 12px;
+  padding: 10px 16px;
   cursor: pointer;
   transition: background var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
 }
