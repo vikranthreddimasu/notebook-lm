@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useRef } from 'react';
 import { useAppStore } from '../../store/app-store';
 import { useNotebooks } from '../../hooks/useNotebooks';
 import { useDocuments } from '../../hooks/useDocuments';
 import { DocumentCard } from '../documents/DocumentCard';
-import { DropZone } from '../documents/DropZone';
 import { showToast } from '../ui/Toast';
+import { timeAgo } from '../../utils/timeAgo';
 import './layout.css';
 
 const NOTEBOOK_COLORS = [
@@ -21,18 +21,20 @@ function notebookColor(id: string): string {
 }
 
 export function Sidebar() {
-  const { notebooks, activeNotebookId, create, select, refresh: refreshNotebooks } = useNotebooks();
+  const { notebooks, activeNotebookId, select, refresh: refreshNotebooks } = useNotebooks();
   const { documents, upload } = useDocuments();
-  const config = useAppStore((s) => s.config);
   const status = useAppStore((s) => s.status);
   const setPreviewDocument = useAppStore((s) => s.setPreviewDocument);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [isUploading, setIsUploading] = useState(false);
+  const handleNewClick = () => {
+    fileInputRef.current?.click();
+  };
 
-  const handleDrop = async (files: FileList) => {
-    setIsUploading(true);
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files?.length) return;
     try {
-      for (const file of Array.from(files)) {
+      for (const file of Array.from(e.target.files)) {
         showToast(`Processing ${file.name}...`);
         await upload(file);
         showToast(`${file.name} indexed successfully`, 'success');
@@ -40,18 +42,25 @@ export function Sidebar() {
       await refreshNotebooks();
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Upload failed', 'error');
-    } finally {
-      setIsUploading(false);
     }
+    e.target.value = '';
   };
 
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
         <h2>Notebooks</h2>
-        <button type="button" className="sidebar-new-btn" onClick={() => create()}>
+        <button type="button" className="sidebar-new-btn" onClick={handleNewClick}>
           + New
         </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".pdf,.docx,.pptx,.txt,.md,.py"
+          multiple
+          onChange={handleFileSelect}
+          style={{ display: 'none' }}
+        />
       </div>
 
       <div className="sidebar-notebooks">
@@ -64,17 +73,17 @@ export function Sidebar() {
           >
             <span className="sidebar-notebook-dot" style={{ background: notebookColor(nb.notebook_id) }} />
             <span className="sidebar-notebook-title">{nb.title}</span>
-            <span className="sidebar-notebook-count">{nb.source_count} docs</span>
+            <span className="sidebar-notebook-count">{timeAgo(nb.updated_at)}</span>
           </button>
         ))}
         {notebooks.length === 0 && (
-          <p className="sidebar-empty">Upload a document to create your first notebook.</p>
+          <p className="sidebar-empty">Drop a file anywhere or click + New to start.</p>
         )}
       </div>
 
       {activeNotebookId && documents.length > 0 && (
         <>
-          <div className="sidebar-section-title">Documents ({documents.length})</div>
+          <div className="sidebar-section-title">Documents</div>
           <div className="sidebar-documents">
             {documents.map((doc, i) => (
               <DocumentCard
@@ -87,15 +96,11 @@ export function Sidebar() {
         </>
       )}
 
-      <DropZone onDrop={handleDrop} isUploading={isUploading} />
-
       <div className="sidebar-footer">
         <div className={`sidebar-status ${status}`}>
           <span className="sidebar-status-dot" />
           <span>
-            {config
-              ? (config.resolved_ollama_model ?? config.ollama_model)
-              : 'Connecting...'}
+            {status === 'ready' ? 'Ready' : status === 'error' ? 'Offline' : 'Connecting...'}
           </span>
         </div>
       </div>

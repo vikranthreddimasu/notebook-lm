@@ -1,17 +1,28 @@
-// apps/desktop/src/components/chat/ChatView.tsx
 import { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../../store/app-store';
 import { useChat } from '../../hooks/useChat';
 import { exportConversation } from '../../api';
 import { MessageBubble } from './MessageBubble';
+import { QuickChips } from './QuickChips';
+import { OverflowMenu } from '../ui/OverflowMenu';
 import './chat.css';
 
+const EMPTY_CHIPS = [
+  'Summarize this document',
+  'What are the key takeaways?',
+  'Explain this simply',
+];
+
+const FOLLOWUP_CHIPS = [
+  'Tell me more',
+  'Simplify this',
+];
+
 export function ChatView() {
-  const { messages, isStreaming, send } = useChat();
+  const { messages, isStreaming, send, clearChat } = useChat();
   const config = useAppStore((s) => s.config);
   const activeNotebookId = useAppStore((s) => s.activeNotebookId);
   const notebooks = useAppStore((s) => s.notebooks);
-  const sourcePanelOpen = useAppStore((s) => s.sourcePanelOpen);
   const toggleSourcePanel = useAppStore((s) => s.toggleSourcePanel);
   const status = useAppStore((s) => s.status);
 
@@ -40,15 +51,12 @@ export function ChatView() {
     }
   };
 
-  // Global keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      // Cmd+/ — toggle source panel
       if (e.metaKey && e.key === '/') {
         e.preventDefault();
         toggleSourcePanel();
       }
-      // Cmd+Shift+E — export
       if (e.metaKey && e.shiftKey && e.key === 'e') {
         e.preventDefault();
         if (messages.length > 0) handleExport();
@@ -58,9 +66,10 @@ export function ChatView() {
     return () => window.removeEventListener('keydown', handler);
   }, [toggleSourcePanel, messages]);
 
-  const handleSend = () => {
-    if (!input.trim() || isStreaming) return;
-    send(input.trim());
+  const handleSend = (text?: string) => {
+    const msg = text ?? input.trim();
+    if (!msg || isStreaming) return;
+    send(msg);
     setInput('');
   };
 
@@ -71,47 +80,48 @@ export function ChatView() {
     }
   };
 
+  const overflowItems = [
+    { label: 'Export conversation', onClick: handleExport, disabled: messages.length === 0 },
+    { label: 'Toggle sources', onClick: toggleSourcePanel },
+    { label: 'Clear chat', onClick: clearChat, disabled: messages.length === 0 },
+  ];
+
+  const lastIsAssistant = messages.length > 0 && messages[messages.length - 1].role === 'assistant';
+
   return (
     <div className="chat-view">
       <div className="chat-header">
         <div className="chat-header-title">
           <h2>{activeNotebook ? activeNotebook.title : 'Notebook LM'}</h2>
-          {activeNotebook && (
-            <span className="chat-header-meta">
-              {activeNotebook.source_count} docs &middot; {activeNotebook.chunk_count} chunks
-            </span>
-          )}
         </div>
         <div className="chat-header-actions">
-          <button
-            type="button"
-            className="chat-header-btn"
-            onClick={handleExport}
-            disabled={messages.length === 0}
-          >
-            Export
-          </button>
-          <button type="button" className="chat-header-btn" onClick={toggleSourcePanel}>
-            {sourcePanelOpen ? 'Hide Sources' : 'Show Sources'}
-          </button>
+          <OverflowMenu items={overflowItems} />
         </div>
       </div>
 
       <div className="chat-messages">
-        {messages.length === 0 && (
+        {messages.length === 0 && activeNotebookId && (
           <div className="chat-empty">
-            <div className="chat-empty-icon">?</div>
-            <p>Ask anything about your documents</p>
+            <p>What would you like to know?</p>
+            <QuickChips chips={EMPTY_CHIPS} onSelect={handleSend} />
+          </div>
+        )}
+        {messages.length === 0 && !activeNotebookId && (
+          <div className="chat-empty">
+            <p>Select a notebook to start</p>
             <p className="chat-empty-hint">
               {config
                 ? `${config.resolved_ollama_model ?? config.ollama_model} is ready`
-                : 'Connecting to model...'}
+                : 'Connecting...'}
             </p>
           </div>
         )}
         {messages.map((msg, i) => (
           <MessageBubble key={i} message={msg} />
         ))}
+        {lastIsAssistant && !isStreaming && (
+          <QuickChips chips={FOLLOWUP_CHIPS} onSelect={handleSend} />
+        )}
         <div ref={messagesEndRef} />
       </div>
 
@@ -121,14 +131,14 @@ export function ChatView() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Ask about your documents... (Enter to send, Shift+Enter for new line)"
-          rows={3}
+          placeholder="Ask anything..."
+          rows={2}
           disabled={isStreaming || status !== 'ready'}
         />
         <button
           type="button"
           className="chat-send-btn"
-          onClick={handleSend}
+          onClick={() => handleSend()}
           disabled={!input.trim() || isStreaming || status !== 'ready'}
         >
           {isStreaming ? 'Thinking...' : 'Send'}
