@@ -1,9 +1,10 @@
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../../store/app-store';
 import { useNotebooks } from '../../hooks/useNotebooks';
 import { useDocuments } from '../../hooks/useDocuments';
 import { DocumentCard } from '../documents/DocumentCard';
 import { showToast } from '../ui/Toast';
+import { deleteNotebook } from '../../api';
 import { timeAgo } from '../../utils/timeAgo';
 import './layout.css';
 
@@ -26,6 +27,28 @@ export function Sidebar() {
   const status = useAppStore((s) => s.status);
   const setPreviewDocument = useAppStore((s) => s.setPreviewDocument);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; notebookId: string } | null>(null);
+
+  useEffect(() => {
+    if (!contextMenu) return;
+    const handler = () => setContextMenu(null);
+    window.addEventListener('click', handler);
+    return () => window.removeEventListener('click', handler);
+  }, [contextMenu]);
+
+  const handleDeleteNotebook = async (notebookId: string) => {
+    try {
+      await deleteNotebook(notebookId);
+      showToast('Notebook deleted', 'success');
+      if (activeNotebookId === notebookId) {
+        select(null);
+      }
+      await refreshNotebooks();
+    } catch (err) {
+      showToast('Failed to delete notebook', 'error');
+    }
+    setContextMenu(null);
+  };
 
   const handleNewClick = () => {
     fileInputRef.current?.click();
@@ -69,6 +92,10 @@ export function Sidebar() {
             type="button"
             className={`sidebar-notebook ${nb.notebook_id === activeNotebookId ? 'active' : ''}`}
             onClick={() => select(nb.notebook_id)}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              setContextMenu({ x: e.clientX, y: e.clientY, notebookId: nb.notebook_id });
+            }}
           >
             <span className="sidebar-notebook-dot" style={{ background: notebookColor(nb.notebook_id) }} />
             <span className="sidebar-notebook-title">{nb.title}</span>
@@ -102,6 +129,21 @@ export function Sidebar() {
           </span>
         </div>
       </div>
+
+      {contextMenu && (
+        <div
+          className="context-menu"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+        >
+          <button
+            type="button"
+            className="context-menu-item context-menu-danger"
+            onClick={() => handleDeleteNotebook(contextMenu.notebookId)}
+          >
+            Delete notebook
+          </button>
+        </div>
+      )}
     </aside>
   );
 }

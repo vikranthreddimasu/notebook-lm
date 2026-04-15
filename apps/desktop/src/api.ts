@@ -117,6 +117,12 @@ export function createNotebook(title?: string): Promise<Notebook> {
   });
 }
 
+export function deleteNotebook(notebookId: string): Promise<{ status: string }> {
+  return request<{ status: string }>(`/notebooks/${encodeURIComponent(notebookId)}`, {
+    method: 'DELETE',
+  });
+}
+
 export async function getDocumentPreviewUrl(notebookId: string, sourcePath: string): Promise<string> {
   const apiBase = await getApiBase();
   const params = new URLSearchParams({

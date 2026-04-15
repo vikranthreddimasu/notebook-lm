@@ -33,6 +33,13 @@ async def create_notebook(request: Request, body: CreateNotebookRequest) -> Note
     return store.upsert_notebook(notebook)
 
 
+@router.delete("/{notebook_id}")
+async def delete_notebook(request: Request, notebook_id: str) -> dict[str, str]:
+    store: NotebookStore = request.app.state.notebook_store
+    store.delete_notebook(notebook_id)
+    return {"status": "deleted", "notebook_id": notebook_id}
+
+
 @router.get("/jobs", response_model=list[IngestionJobStatus])
 async def list_jobs(request: Request) -> list[IngestionJobStatus]:
     store: NotebookStore = request.app.state.notebook_store

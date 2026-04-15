@@ -9,6 +9,7 @@ import { getDocumentPreviewUrl } from '../../api';
 import DocumentPreview from '../../DocumentPreview';
 import { ToastContainer, showToast } from '../ui/Toast';
 import { DragOverlay } from '../ui/DragOverlay';
+import { ConnectionBanner } from '../ui/ConnectionBanner';
 import './layout.css';
 
 export function AppShell() {
@@ -86,6 +87,7 @@ export function AppShell() {
         notebookName={activeNotebook?.title}
         onDrop={handleGlobalDrop}
       />
+      <ConnectionBanner />
       <ToastContainer />
     </>
   );
