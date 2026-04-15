@@ -295,16 +295,39 @@
   white-space: nowrap;
 }
 
-.source-card-relevance {
-  font-size: var(--text-xs);
-  color: var(--color-success);
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
+.source-card-relevance-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   flex-shrink: 0;
   margin-left: var(--space-2);
-  background: rgba(52, 211, 153, 0.1);
-  padding: 1px 6px;
-  border-radius: 99px;
+}
+
+.source-card-relevance-fill {
+  width: 40px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--color-accent);
+  opacity: 0.6;
+  position: relative;
+}
+
+.source-card-relevance-fill::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 2px;
+  background: var(--color-bg-surface);
+  width: 40px;
+  z-index: -1;
+}
+
+.source-card-relevance-label {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  min-width: 28px;
 }
 
 .source-card-preview {

@@ -28,7 +28,13 @@ export function SourcePanel() {
               <div className="source-card-header">
                 <span className="source-card-name">{source.document_name}</span>
                 {source.relevance_score != null && (
-                  <span className="source-card-relevance">{source.relevance_score}%</span>
+                  <div className="source-card-relevance-bar">
+                    <div
+                      className="source-card-relevance-fill"
+                      style={{ width: `${source.relevance_score}%` }}
+                    />
+                    <span className="source-card-relevance-label">{source.relevance_score}%</span>
+                  </div>
                 )}
               </div>
               <p className="source-card-preview">{source.preview}</p>
