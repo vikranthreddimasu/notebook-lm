@@ -44,7 +44,7 @@ async function getApiBase(): Promise<string> {
   }
 
   // Fallback: env var or default
-  resolvedApiBase = import.meta.env.VITE_API_BASE_URL ?? DEFAULT_API_BASE;
+  resolvedApiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? DEFAULT_API_BASE;
   return resolvedApiBase;
 }
 
