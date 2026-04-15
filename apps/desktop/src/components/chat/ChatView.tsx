@@ -10,9 +10,12 @@ export function ChatView() {
   const { messages, isStreaming, send } = useChat();
   const config = useAppStore((s) => s.config);
   const activeNotebookId = useAppStore((s) => s.activeNotebookId);
+  const notebooks = useAppStore((s) => s.notebooks);
   const sourcePanelOpen = useAppStore((s) => s.sourcePanelOpen);
   const toggleSourcePanel = useAppStore((s) => s.toggleSourcePanel);
   const status = useAppStore((s) => s.status);
+
+  const activeNotebook = notebooks.find((nb) => nb.notebook_id === activeNotebookId) ?? null;
 
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -71,7 +74,14 @@ export function ChatView() {
   return (
     <div className="chat-view">
       <div className="chat-header">
-        <h2>{activeNotebookId ? 'Chat' : 'Notebook LM'}</h2>
+        <div className="chat-header-title">
+          <h2>{activeNotebook ? activeNotebook.title : 'Notebook LM'}</h2>
+          {activeNotebook && (
+            <span className="chat-header-meta">
+              {activeNotebook.source_count} docs &middot; {activeNotebook.chunk_count} chunks
+            </span>
+          )}
+        </div>
         <div className="chat-header-actions">
           <button
             type="button"
@@ -90,13 +100,13 @@ export function ChatView() {
       <div className="chat-messages">
         {messages.length === 0 && (
           <div className="chat-empty">
-            <p>Start a conversation with your documents</p>
-            {config && (
-              <p className="chat-empty-hint">
-                Using {config.resolved_ollama_model ?? config.ollama_model} via{' '}
-                {config.llm_provider}
-              </p>
-            )}
+            <div className="chat-empty-icon">?</div>
+            <p>Ask anything about your documents</p>
+            <p className="chat-empty-hint">
+              {config
+                ? `${config.resolved_ollama_model ?? config.ollama_model} is ready`
+                : 'Connecting to model...'}
+            </p>
           </div>
         )}
         {messages.map((msg, i) => (

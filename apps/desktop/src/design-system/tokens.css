@@ -22,11 +22,11 @@
   --color-text-secondary: #a8a29e;
   --color-text-muted: #57534e;
 
-  /* Accent — aged amber gold */
-  --color-accent: #d4a04a;
-  --color-accent-hover: #c08d35;
-  --color-accent-subtle: rgba(212, 160, 74, 0.1);
-  --color-accent-glow: rgba(212, 160, 74, 0.18);
+  /* Accent — cool sage */
+  --color-accent: #7c9a82;
+  --color-accent-hover: #6a8a70;
+  --color-accent-subtle: rgba(124, 154, 130, 0.10);
+  --color-accent-glow: rgba(124, 154, 130, 0.15);
 
   /* Status */
   --color-success: #4ade80;
@@ -38,7 +38,7 @@
   --shadow-md: 0 4px 16px rgba(10, 8, 6, 0.45);
   --shadow-lg: 0 12px 40px rgba(10, 8, 6, 0.55);
   --shadow-inset: inset 0 1px 0 rgba(245, 240, 234, 0.03);
-  --shadow-glow: 0 0 24px rgba(212, 160, 74, 0.12);
+  --shadow-glow: 0 0 24px rgba(124, 154, 130, 0.12);
 
   /* Radius */
   --radius-xs: 4px;
