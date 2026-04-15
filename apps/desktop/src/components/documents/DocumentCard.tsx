@@ -28,6 +28,9 @@ export function DocumentCard({ document, onClick }: DocumentCardProps) {
         <span className="document-card-name" title={document.filename}>
           {document.filename}
         </span>
+        <span className="document-card-meta">
+          {ext === 'pdf' ? 'PDF' : ext === 'docx' ? 'Word' : ext === 'md' ? 'Markdown' : ext === 'txt' ? 'Text' : ext === 'pptx' ? 'Slides' : ext === 'py' ? 'Python' : ext.toUpperCase()}
+        </span>
       </div>
     </div>
   );

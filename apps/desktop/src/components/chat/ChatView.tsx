@@ -123,6 +123,11 @@ export function ChatView() {
       <div className="chat-header">
         <div className="chat-header-title">
           <h2>{activeNotebook ? activeNotebook.title : 'Notebook LM'}</h2>
+          {activeNotebook && (
+            <span className="chat-header-meta">
+              {activeNotebook.source_count} {activeNotebook.source_count === 1 ? 'doc' : 'docs'}
+            </span>
+          )}
         </div>
         <div className="chat-header-actions">
           {messages.length > 0 && (
