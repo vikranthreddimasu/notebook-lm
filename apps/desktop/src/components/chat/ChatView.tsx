@@ -29,6 +29,32 @@ export function ChatView() {
     }
   }, [isStreaming, status]);
 
+  const handleExport = async () => {
+    try {
+      await exportConversation('Notebook LM Conversation', messages);
+    } catch (err) {
+      console.error('Export failed', err);
+    }
+  };
+
+  // Global keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      // Cmd+/ — toggle source panel
+      if (e.metaKey && e.key === '/') {
+        e.preventDefault();
+        toggleSourcePanel();
+      }
+      // Cmd+Shift+E — export
+      if (e.metaKey && e.shiftKey && e.key === 'e') {
+        e.preventDefault();
+        if (messages.length > 0) handleExport();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [toggleSourcePanel, messages]);
+
   const handleSend = () => {
     if (!input.trim() || isStreaming) return;
     send(input.trim());
@@ -39,14 +65,6 @@ export function ChatView() {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
-    }
-  };
-
-  const handleExport = async () => {
-    try {
-      await exportConversation('Notebook LM Conversation', messages);
-    } catch (err) {
-      console.error('Export failed', err);
     }
   };
 
