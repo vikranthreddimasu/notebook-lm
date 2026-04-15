@@ -28,6 +28,7 @@ export function ChatView() {
   const activeNotebook = notebooks.find((nb) => nb.notebook_id === activeNotebookId) ?? null;
 
   const [input, setInput] = useState('');
+  const [isScrolledUp, setIsScrolledUp] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -41,6 +42,21 @@ export function ChatView() {
       return () => clearTimeout(t);
     }
   }, [isStreaming, status]);
+
+  useEffect(() => {
+    const el = messagesEndRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsScrolledUp(!entry.isIntersecting),
+      { threshold: 0.1 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   const handleExport = async () => {
     try {
@@ -126,13 +142,39 @@ export function ChatView() {
           </div>
         )}
         {messages.map((msg, i) => (
-          <MessageBubble key={i} message={msg} />
+          <MessageBubble
+            key={i}
+            message={msg}
+            onRetry={
+              msg.role === 'assistant' && msg.content.startsWith('Error: ')
+                ? () => {
+                    // Find the user message above this error
+                    const userMsg = messages[i - 1];
+                    if (userMsg?.role === 'user') {
+                      // Remove error + user message, re-send
+                      const store = useAppStore.getState();
+                      const newMessages = messages.slice(0, i - 1);
+                      // We can't directly set messages in store, so clear and re-add
+                      store.clearMessages();
+                      newMessages.forEach((m) => store.addMessage(m));
+                      send(userMsg.content);
+                    }
+                  }
+                : undefined
+            }
+          />
         ))}
         {lastIsAssistant && !isStreaming && (
           <QuickChips chips={FOLLOWUP_CHIPS} onSelect={handleSend} />
         )}
         <div ref={messagesEndRef} />
       </div>
+
+      {isScrolledUp && messages.length > 0 && (
+        <button type="button" className="scroll-to-bottom" onClick={scrollToBottom}>
+          ↓
+        </button>
+      )}
 
       <div className="chat-input-area">
         <textarea

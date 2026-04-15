@@ -26,7 +26,18 @@ function App() {
   }, [setStatus, setConfig]);
 
   if (status === 'checking') {
-    return <div className="app-loading">Connecting to backend...</div>;
+    return (
+      <div className="app-skeleton">
+        <div className="skeleton-sidebar">
+          <div className="skeleton-line" style={{ width: '60%' }} />
+          <div className="skeleton-line" style={{ width: '80%' }} />
+          <div className="skeleton-line" style={{ width: '45%' }} />
+        </div>
+        <div className="skeleton-main">
+          <div className="skeleton-line" style={{ width: '40%', height: 20 }} />
+        </div>
+      </div>
+    );
   }
 
   if (status === 'error') {
