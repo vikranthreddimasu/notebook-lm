@@ -4,7 +4,21 @@ import { useNotebooks } from '../../hooks/useNotebooks';
 import { useDocuments } from '../../hooks/useDocuments';
 import { DocumentCard } from '../documents/DocumentCard';
 import { DropZone } from '../documents/DropZone';
+import { showToast } from '../ui/Toast';
 import './layout.css';
+
+const NOTEBOOK_COLORS = [
+  '#818cf8', '#f472b6', '#34d399', '#fbbf24', '#60a5fa',
+  '#a78bfa', '#fb923c', '#2dd4bf', '#f87171', '#a3e635',
+];
+
+function notebookColor(id: string): string {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = ((hash << 5) - hash + id.charCodeAt(i)) | 0;
+  }
+  return NOTEBOOK_COLORS[Math.abs(hash) % NOTEBOOK_COLORS.length];
+}
 
 export function Sidebar() {
   const { notebooks, activeNotebookId, create, select, refresh: refreshNotebooks } = useNotebooks();
@@ -19,11 +33,13 @@ export function Sidebar() {
     setIsUploading(true);
     try {
       for (const file of Array.from(files)) {
+        showToast(`Processing ${file.name}...`);
         await upload(file);
+        showToast(`${file.name} indexed successfully`, 'success');
       }
       await refreshNotebooks();
     } catch (err) {
-      console.error('Upload failed', err);
+      showToast(err instanceof Error ? err.message : 'Upload failed', 'error');
     } finally {
       setIsUploading(false);
     }
@@ -46,6 +62,7 @@ export function Sidebar() {
             className={`sidebar-notebook ${nb.notebook_id === activeNotebookId ? 'active' : ''}`}
             onClick={() => select(nb.notebook_id)}
           >
+            <span className="sidebar-notebook-dot" style={{ background: notebookColor(nb.notebook_id) }} />
             <span className="sidebar-notebook-title">{nb.title}</span>
             <span className="sidebar-notebook-count">{nb.source_count} docs</span>
           </button>

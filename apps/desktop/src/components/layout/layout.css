@@ -93,6 +93,21 @@
   box-shadow: var(--shadow-inset);
 }
 
+.sidebar-notebook-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-right: var(--space-2);
+  opacity: 0.7;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.sidebar-notebook:hover .sidebar-notebook-dot,
+.sidebar-notebook.active .sidebar-notebook-dot {
+  opacity: 1;
+}
+
 .sidebar-notebook-title {
   flex: 1;
   overflow: hidden;
