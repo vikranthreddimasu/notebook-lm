@@ -49,7 +49,6 @@ export function Sidebar() {
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
-        <h2>Notebooks</h2>
         <button type="button" className="sidebar-new-btn" onClick={handleNewClick}>
           + New
         </button>
@@ -83,7 +82,6 @@ export function Sidebar() {
 
       {activeNotebookId && documents.length > 0 && (
         <>
-          <div className="sidebar-section-title">Documents</div>
           <div className="sidebar-documents">
             {documents.map((doc, i) => (
               <DocumentCard

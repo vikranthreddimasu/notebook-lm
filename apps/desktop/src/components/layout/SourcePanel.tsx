@@ -8,11 +8,6 @@ export function SourcePanel() {
 
   return (
     <aside className="source-panel">
-      <div className="source-panel-header">
-        <h3>Sources</h3>
-        <span className="source-panel-count">{activeSources.length}</span>
-      </div>
-
       <div className="source-panel-list">
         {activeSources.map((source, i) => (
           <div key={`${source.source_path}-${i}`} className="source-card">

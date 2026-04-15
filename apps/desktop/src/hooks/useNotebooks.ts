@@ -12,6 +12,10 @@ export function useNotebooks() {
     try {
       const result = await listNotebooks();
       setNotebooks(result);
+      // Auto-select most recent notebook if none active
+      if (!useAppStore.getState().activeNotebookId && result.length > 0) {
+        useAppStore.getState().setActiveNotebookId(result[0].notebook_id);
+      }
     } catch (err) {
       console.error('Failed to load notebooks', err);
     }

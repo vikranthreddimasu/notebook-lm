@@ -20,7 +20,6 @@ const FOLLOWUP_CHIPS = [
 
 export function ChatView() {
   const { messages, isStreaming, send, clearChat } = useChat();
-  const config = useAppStore((s) => s.config);
   const activeNotebookId = useAppStore((s) => s.activeNotebookId);
   const notebooks = useAppStore((s) => s.notebooks);
   const toggleSourcePanel = useAppStore((s) => s.toggleSourcePanel);
@@ -100,20 +99,10 @@ export function ChatView() {
       </div>
 
       <div className="chat-messages">
-        {messages.length === 0 && activeNotebookId && (
+        {messages.length === 0 && (
           <div className="chat-empty">
             <p>What would you like to know?</p>
             <QuickChips chips={EMPTY_CHIPS} onSelect={handleSend} />
-          </div>
-        )}
-        {messages.length === 0 && !activeNotebookId && (
-          <div className="chat-empty">
-            <p>Select a notebook to start</p>
-            <p className="chat-empty-hint">
-              {config
-                ? `${config.resolved_ollama_model ?? config.ollama_model} is ready`
-                : 'Connecting...'}
-            </p>
           </div>
         )}
         {messages.map((msg, i) => (
@@ -141,7 +130,7 @@ export function ChatView() {
           onClick={() => handleSend()}
           disabled={!input.trim() || isStreaming || status !== 'ready'}
         >
-          {isStreaming ? 'Thinking...' : 'Send'}
+          {isStreaming ? '...' : '↑'}
         </button>
       </div>
     </div>

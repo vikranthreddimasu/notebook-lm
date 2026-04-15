@@ -9,7 +9,6 @@ import { getDocumentPreviewUrl } from '../../api';
 import DocumentPreview from '../../DocumentPreview';
 import { ToastContainer, showToast } from '../ui/Toast';
 import { DragOverlay } from '../ui/DragOverlay';
-import { ShortcutsOverlay } from '../ui/ShortcutsOverlay';
 import './layout.css';
 
 export function AppShell() {
@@ -61,7 +60,6 @@ export function AppShell() {
           </div>
         </div>
         <DragOverlay onDrop={handleGlobalDrop} />
-        <ShortcutsOverlay />
         <ToastContainer />
       </>
     );
@@ -88,7 +86,6 @@ export function AppShell() {
         notebookName={activeNotebook?.title}
         onDrop={handleGlobalDrop}
       />
-      <ShortcutsOverlay />
       <ToastContainer />
     </>
   );

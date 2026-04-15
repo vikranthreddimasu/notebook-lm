@@ -28,7 +28,6 @@ export function DocumentCard({ document, onClick }: DocumentCardProps) {
         <span className="document-card-name" title={document.filename}>
           {document.filename}
         </span>
-        <span className="document-card-meta">{document.chunk_count} chunks</span>
       </div>
     </div>
   );
