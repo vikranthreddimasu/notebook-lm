@@ -8,6 +8,7 @@ import type {
   MetricsSummary,
   AgentPlanResponse,
   ChatMessage,
+  Notebook,
 } from './types';
 
 declare global {
@@ -103,6 +104,17 @@ export async function uploadDocument(file: File, notebookId?: string): Promise<I
 
 export function listDocuments(notebookId: string): Promise<DocumentsListResponse> {
   return request<DocumentsListResponse>(`/documents/list?notebook_id=${encodeURIComponent(notebookId)}`);
+}
+
+export function listNotebooks(): Promise<Notebook[]> {
+  return request<Notebook[]>('/notebooks/');
+}
+
+export function createNotebook(title?: string): Promise<Notebook> {
+  return request<Notebook>('/notebooks/', {
+    method: 'POST',
+    body: JSON.stringify({ title: title ?? 'New Notebook' }),
+  });
 }
 
 export async function getDocumentPreviewUrl(notebookId: string, sourcePath: string): Promise<string> {
