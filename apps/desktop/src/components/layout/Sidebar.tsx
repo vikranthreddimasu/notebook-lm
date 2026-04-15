@@ -108,18 +108,32 @@ export function Sidebar() {
         )}
       </div>
 
-      {activeNotebookId && documents.length > 0 && (
+      {activeNotebookId && (
         <>
-          <div className="sidebar-section-title">Documents</div>
-          <div className="sidebar-documents">
-            {documents.map((doc, i) => (
-              <DocumentCard
-                key={i}
-                document={doc}
-                onClick={() => setPreviewDocument(doc)}
-              />
-            ))}
+          <div className="sidebar-section-title">
+            <span>Documents</span>
+            <button type="button" className="sidebar-add-doc-btn" onClick={handleNewClick}>
+              + Add
+            </button>
           </div>
+          {documents.length > 0 ? (
+            <div className="sidebar-documents">
+              {documents.map((doc, i) => (
+                <DocumentCard
+                  key={i}
+                  document={doc}
+                  onClick={() => setPreviewDocument(doc)}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="sidebar-no-docs">
+              <button type="button" className="sidebar-upload-btn" onClick={handleNewClick}>
+                Upload a document
+              </button>
+              <p>or drag files anywhere</p>
+            </div>
+          )}
         </>
       )}
 

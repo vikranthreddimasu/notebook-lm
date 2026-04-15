@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../../store/app-store';
 import { useNotebooks } from '../../hooks/useNotebooks';
 import { uploadDocument } from '../../api';
@@ -49,6 +49,14 @@ export function AppShell() {
     }
   }, [activeNotebookId, refreshNotebooks]);
 
+  const welcomeFileRef = useRef<HTMLInputElement>(null);
+
+  const handleWelcomeFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files?.length) return;
+    await handleGlobalDrop(e.target.files);
+    e.target.value = '';
+  };
+
   const showWelcome = notebooks.length === 0 && !activeNotebookId;
 
   if (showWelcome) {
@@ -58,6 +66,22 @@ export function AppShell() {
           <div className="welcome-content">
             <h1 className="welcome-title">Notebook LM</h1>
             <p className="welcome-subtitle">Drop a document. Ask anything.</p>
+            <button
+              type="button"
+              className="welcome-browse-btn"
+              onClick={() => welcomeFileRef.current?.click()}
+            >
+              Browse files
+            </button>
+            <input
+              ref={welcomeFileRef}
+              type="file"
+              accept=".pdf,.docx,.pptx,.txt,.md,.py"
+              multiple
+              onChange={handleWelcomeFileSelect}
+              style={{ display: 'none' }}
+            />
+            <p className="welcome-hint">or drag files anywhere on this window</p>
           </div>
         </div>
         <DragOverlay onDrop={handleGlobalDrop} />
