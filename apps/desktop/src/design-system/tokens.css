@@ -1,7 +1,7 @@
 :root {
   /*
-   * "Manuscript" palette — warm stone blacks with amber gold accent.
-   * Inspired by a well-curated study: warm, rich, focused.
+   * "Lazy Scholar" — warm stone blacks with sage accent.
+   * Calm, generous, readable. The tool disappears, the content is everything.
    */
 
   /* Backgrounds — warm stone tones, not cold gray */
@@ -85,7 +85,7 @@
   --titlebar-height: 52px;
 }
 
-/* Selection — gold highlight */
+/* Selection */
 ::selection {
   background: var(--color-accent-subtle);
   color: var(--color-text-primary);

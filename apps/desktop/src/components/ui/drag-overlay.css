@@ -26,16 +26,10 @@
 }
 
 .drag-overlay-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: var(--color-accent-subtle);
-  color: var(--color-accent);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: var(--text-xl);
-  font-weight: 600;
+  font-size: var(--text-2xl);
+  color: var(--color-text-muted);
+  font-weight: 300;
+  line-height: 1;
 }
 
 .drag-overlay-text {

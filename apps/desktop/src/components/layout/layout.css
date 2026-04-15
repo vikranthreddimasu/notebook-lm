@@ -185,12 +185,10 @@
 
 .sidebar-status.ready .sidebar-status-dot {
   background: var(--color-success);
-  box-shadow: 0 0 6px rgba(52, 211, 153, 0.4);
 }
 
 .sidebar-status.error .sidebar-status-dot {
   background: var(--color-error);
-  box-shadow: 0 0 6px rgba(248, 113, 113, 0.4);
 }
 
 .sidebar-status.checking .sidebar-status-dot {
