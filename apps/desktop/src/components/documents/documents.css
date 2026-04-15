@@ -7,7 +7,7 @@
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: all var(--duration-fast) var(--ease-out);
+  transition: background var(--duration-fast) var(--ease-out);
 }
 
 .document-card:hover {
@@ -16,6 +16,7 @@
 
 .document-card:active {
   background: var(--color-bg-active);
+  transform: scale(0.98);
 }
 
 .document-card-icon {
@@ -67,7 +68,7 @@
   color: var(--color-text-muted);
   font-size: var(--text-sm);
   cursor: pointer;
-  transition: all var(--duration-normal) var(--ease-out);
+  transition: border-color var(--duration-normal) var(--ease-out), color var(--duration-normal) var(--ease-out), background var(--duration-normal) var(--ease-out);
   -webkit-app-region: no-drag;
 }
 

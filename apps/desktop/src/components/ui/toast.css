@@ -19,7 +19,7 @@
   background: var(--color-bg-elevated);
   border: 1px solid var(--color-border);
   box-shadow: var(--shadow-lg);
-  animation: toastIn 0.3s var(--ease-out), toastOut 0.3s 3.7s var(--ease-out) forwards;
+  animation: toastIn 200ms var(--ease-out), toastOut 300ms 3.7s var(--ease-out) forwards;
   pointer-events: auto;
 }
 
