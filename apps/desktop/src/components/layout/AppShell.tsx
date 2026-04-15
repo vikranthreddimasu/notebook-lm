@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useAppStore } from '../../store/app-store';
 import { Sidebar } from './Sidebar';
 import { SourcePanel } from './SourcePanel';
@@ -11,6 +12,18 @@ export function AppShell() {
   const setPreviewDocument = useAppStore((s) => s.setPreviewDocument);
   const activeNotebookId = useAppStore((s) => s.activeNotebookId);
 
+  const [resolvedPreviewUrl, setResolvedPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (previewDocument && activeNotebookId) {
+      getDocumentPreviewUrl(activeNotebookId, previewDocument.source_path).then(
+        setResolvedPreviewUrl,
+      );
+    } else {
+      setResolvedPreviewUrl(null);
+    }
+  }, [previewDocument, activeNotebookId]);
+
   return (
     <>
       <div className="app-shell">
@@ -19,11 +32,11 @@ export function AppShell() {
         <SourcePanel />
       </div>
 
-      {previewDocument && activeNotebookId && (
+      {previewDocument && activeNotebookId && resolvedPreviewUrl && (
         <DocumentPreview
           isOpen={true}
           onClose={() => setPreviewDocument(null)}
-          documentUrl={getDocumentPreviewUrl(activeNotebookId, previewDocument.source_path)}
+          documentUrl={resolvedPreviewUrl}
           filename={previewDocument.filename}
         />
       )}
