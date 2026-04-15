@@ -126,6 +126,8 @@
   font-size: var(--text-base);
   resize: none;
   outline: none;
+  min-height: 44px;
+  max-height: 120px;
   transition: border-color var(--duration-normal) var(--ease-out),
               box-shadow var(--duration-normal) var(--ease-out),
               background var(--duration-normal) var(--ease-out);
@@ -170,6 +172,15 @@
 .chat-send-btn:disabled {
   opacity: 0.3;
   cursor: not-allowed;
+}
+
+.chat-stop-btn {
+  background: var(--color-error);
+}
+
+.chat-stop-btn:hover:not(:disabled) {
+  background: #e74c6f;
+  box-shadow: var(--shadow-md);
 }
 
 /* ---- MessageBubble ---- */

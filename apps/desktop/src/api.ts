@@ -129,6 +129,7 @@ export async function getDocumentPreviewUrl(notebookId: string, sourcePath: stri
 export async function streamChatMessage(
   body: ChatRequest,
   onEvent: (event: ChatStreamEvent) => void,
+  signal?: AbortSignal,
 ): Promise<void> {
   const apiBase = await getApiBase();
   const response = await fetch(`${apiBase}/chat/stream`, {
@@ -137,6 +138,7 @@ export async function streamChatMessage(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(body),
+    signal,
   });
 
   if (!response.ok || !response.body) {

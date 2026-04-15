@@ -19,7 +19,7 @@ const FOLLOWUP_CHIPS = [
 ];
 
 export function ChatView() {
-  const { messages, isStreaming, send, clearChat } = useChat();
+  const { messages, isStreaming, send, clearChat, abort } = useChat();
   const activeNotebookId = useAppStore((s) => s.activeNotebookId);
   const notebooks = useAppStore((s) => s.notebooks);
   const toggleSourcePanel = useAppStore((s) => s.toggleSourcePanel);
@@ -60,16 +60,31 @@ export function ChatView() {
         e.preventDefault();
         if (messages.length > 0) handleExport();
       }
+      // Cmd+N — new chat
+      if (e.metaKey && e.key === 'n') {
+        e.preventDefault();
+        clearChat();
+      }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [toggleSourcePanel, messages]);
+  }, [toggleSourcePanel, messages, clearChat]);
+
+  const handleInput = () => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  };
 
   const handleSend = (text?: string) => {
     const msg = text ?? input.trim();
     if (!msg || isStreaming) return;
     send(msg);
     setInput('');
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto';
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -94,6 +109,11 @@ export function ChatView() {
           <h2>{activeNotebook ? activeNotebook.title : 'Notebook LM'}</h2>
         </div>
         <div className="chat-header-actions">
+          {messages.length > 0 && (
+            <button type="button" className="chat-header-btn" onClick={clearChat}>
+              New chat
+            </button>
+          )}
           <OverflowMenu items={overflowItems} />
         </div>
       </div>
@@ -120,17 +140,17 @@ export function ChatView() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
+          onInput={handleInput}
           placeholder="Ask anything..."
-          rows={2}
           disabled={isStreaming || status !== 'ready'}
         />
         <button
           type="button"
-          className="chat-send-btn"
-          onClick={() => handleSend()}
-          disabled={!input.trim() || isStreaming || status !== 'ready'}
+          className={`chat-send-btn ${isStreaming ? 'chat-stop-btn' : ''}`}
+          onClick={() => isStreaming ? abort() : handleSend()}
+          disabled={!isStreaming && (!input.trim() || status !== 'ready')}
         >
-          {isStreaming ? '...' : '↑'}
+          {isStreaming ? '■' : '↑'}
         </button>
       </div>
     </div>

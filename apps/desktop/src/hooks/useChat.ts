@@ -9,6 +9,7 @@ export function useChat() {
 
   const assistantIndexRef = useRef<number | null>(null);
   const bufferRef = useRef('');
+  const abortRef = useRef<AbortController | null>(null);
 
   const send = useCallback(
     async (prompt: string) => {
@@ -70,9 +71,14 @@ export function useChat() {
         }
       };
 
+      const controller = new AbortController();
+      abortRef.current = controller;
+
       try {
-        await streamChatMessage(body, handleEvent);
+        await streamChatMessage(body, handleEvent, controller.signal);
+        abortRef.current = null;
       } catch {
+        abortRef.current = null;
         try {
           const response = await sendChatMessage(body);
           if (assistantIndexRef.current !== null) {
@@ -97,5 +103,16 @@ export function useChat() {
     useAppStore.getState().clearMessages();
   }, []);
 
-  return { messages, isStreaming, send, clearChat };
+  const abort = useCallback(() => {
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
+    }
+    const s = useAppStore.getState();
+    if (s.isStreaming) {
+      s.setIsStreaming(false);
+    }
+  }, []);
+
+  return { messages, isStreaming, send, clearChat, abort };
 }
