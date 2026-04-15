@@ -40,12 +40,16 @@
   --shadow-inset: inset 0 1px 0 rgba(245, 240, 234, 0.03);
   --shadow-glow: 0 0 24px rgba(124, 154, 130, 0.12);
 
-  /* Radius */
-  --radius-xs: 4px;
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
+  /* Radius — Soft Pill system */
+  --radius-xs: 6px;
+  --radius-sm: 999px;
+  --radius-md: 999px;
+  --radius-lg: 999px;
   --radius-xl: 20px;
+  --radius-card: 14px;
+  --radius-input: 999px;
+  --radius-textarea: 20px;
+  --radius-modal: 20px;
 
   /* Spacing (4px base) */
   --space-1: 4px;
@@ -59,14 +63,14 @@
   --space-12: 48px;
 
   /* Typography — system San Francisco on macOS */
-  --font-sans: -apple-system, BlinkMacSystemFont, 'Inter', system-ui, sans-serif;
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   --font-mono: 'SF Mono', 'JetBrains Mono', 'Fira Code', monospace;
-  --text-xs: 11px;
-  --text-sm: 13px;
-  --text-base: 14px;
-  --text-lg: 16px;
-  --text-xl: 20px;
-  --text-2xl: 24px;
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 18px;
+  --text-xl: 24px;
+  --text-2xl: 32px;
 
   /* Transitions */
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
