@@ -1,6 +1,6 @@
 // apps/desktop/src/store/app-store.ts
 import { create } from 'zustand';
-import type { BackendConfig, ChatMessage, DocumentInfo, Notebook, SourceChunk } from '../types';
+import type { BackendConfig, ChatMessage, Conversation, DocumentInfo, Notebook, SourceChunk } from '../types';
 
 interface AppState {
   // Connection
@@ -14,6 +14,10 @@ interface AppState {
   // Chat
   messages: ChatMessage[];
   isStreaming: boolean;
+
+  // Conversations
+  conversations: Conversation[];
+  activeConversationId: string | null;
 
   // Documents
   documents: DocumentInfo[];
@@ -37,6 +41,10 @@ interface AppState {
   clearMessages: () => void;
   setIsStreaming: (val: boolean) => void;
 
+  // Actions — conversations
+  setConversations: (convs: Conversation[]) => void;
+  setActiveConversationId: (id: string | null) => void;
+
   // Actions — documents
   setDocuments: (docs: DocumentInfo[]) => void;
 
@@ -54,6 +62,8 @@ export const useAppStore = create<AppState>((set) => ({
   activeNotebookId: null,
   messages: [],
   isStreaming: false,
+  conversations: [],
+  activeConversationId: null,
   documents: [],
   sourcePanelOpen: true,
   activeSources: [],
@@ -66,7 +76,7 @@ export const useAppStore = create<AppState>((set) => ({
   // Notebooks — switching clears chat and documents
   setNotebooks: (notebooks) => set({ notebooks }),
   setActiveNotebookId: (id) =>
-    set({ activeNotebookId: id, messages: [], activeSources: [], documents: [] }),
+    set({ activeNotebookId: id, messages: [], activeSources: [], documents: [], activeConversationId: null }),
 
   // Chat
   addMessage: (msg) => set((state) => ({ messages: [...state.messages, msg] })),
@@ -80,6 +90,10 @@ export const useAppStore = create<AppState>((set) => ({
     }),
   clearMessages: () => set({ messages: [], activeSources: [] }),
   setIsStreaming: (val) => set({ isStreaming: val }),
+
+  // Conversations
+  setConversations: (convs) => set({ conversations: convs }),
+  setActiveConversationId: (id) => set({ activeConversationId: id }),
 
   // Documents
   setDocuments: (docs) => set({ documents: docs }),

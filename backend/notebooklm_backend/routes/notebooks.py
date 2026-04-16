@@ -36,6 +36,10 @@ async def create_notebook(request: Request, body: CreateNotebookRequest) -> Note
 @router.delete("/{notebook_id}")
 async def delete_notebook(request: Request, notebook_id: str) -> dict[str, str]:
     store: NotebookStore = request.app.state.notebook_store
+    # Cascade: delete conversations for this notebook first
+    from ..services.conversation_store import ConversationStore
+    conv_store: ConversationStore = request.app.state.conversation_store
+    conv_store.delete_conversations_for_notebook(notebook_id)
     store.delete_notebook(notebook_id)
     return {"status": "deleted", "notebook_id": notebook_id}
 

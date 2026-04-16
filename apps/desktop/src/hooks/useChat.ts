@@ -1,6 +1,7 @@
 import { useCallback, useRef } from 'react';
 import { useAppStore } from '../store/app-store';
-import { streamChatMessage, sendChatMessage } from '../api';
+import { streamChatMessage, sendChatMessage, listConversations } from '../api';
+import { showToast } from '../components/ui/Toast';
 import type { ChatStreamEvent, SourceChunk } from '../types';
 
 export function useChat() {
@@ -33,6 +34,7 @@ export function useChat() {
         prompt,
         history,
         notebook_id: store.activeNotebookId,
+        conversation_id: store.activeConversationId,
       };
 
       const handleEvent = (event: ChatStreamEvent) => {
@@ -42,10 +44,22 @@ export function useChat() {
             const sources: SourceChunk[] = (event.sources ?? []).map((src) => ({
               ...src,
               document_name: src.source_path.split(/[/\\]/).pop() ?? src.source_path,
-              relevance_score:
-                src.distance != null ? Math.round((1 - src.distance) * 100) : undefined,
+              relevance_score: (src as Record<string, unknown>).relevance_score as number | undefined,
             }));
             s.setActiveSources(sources);
+            // Capture conversation_id from backend (created on first message)
+            if (event.conversation_id && !s.activeConversationId) {
+              s.setActiveConversationId(event.conversation_id);
+              // Optimistic title: use first user message
+              const firstMsg = s.messages.find((m) => m.role === 'user');
+              if (firstMsg) {
+                const title = firstMsg.content.slice(0, 50).trim();
+                s.setConversations([
+                  { id: event.conversation_id, notebook_id: s.activeNotebookId ?? '', title, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+                  ...s.conversations,
+                ]);
+              }
+            }
             break;
           }
           case 'token':
@@ -60,6 +74,12 @@ export function useChat() {
             }
             s.setIsStreaming(false);
             assistantIndexRef.current = null;
+            // Refresh conversation list to get backend-accurate titles
+            if (s.activeNotebookId) {
+              listConversations(s.activeNotebookId)
+                .then((convs) => useAppStore.getState().setConversations(convs))
+                .catch(() => {});
+            }
             break;
           case 'error':
             if (assistantIndexRef.current !== null) {
@@ -67,6 +87,9 @@ export function useChat() {
             }
             s.setIsStreaming(false);
             assistantIndexRef.current = null;
+            break;
+          case 'warning':
+            showToast(event.message, 'error');
             break;
         }
       };
@@ -100,7 +123,9 @@ export function useChat() {
   );
 
   const clearChat = useCallback(() => {
-    useAppStore.getState().clearMessages();
+    const s = useAppStore.getState();
+    s.clearMessages();
+    s.setActiveConversationId(null);
   }, []);
 
   const abort = useCallback(() => {

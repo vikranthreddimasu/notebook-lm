@@ -198,11 +198,16 @@ class ChatService:
             preview = src.content.strip()
             if len(preview) > 160:
                 preview = preview[:157] + "..."
+            relevance = None
+            if src.distance is not None:
+                # L2 distance normalization: 0 -> 100%, unbounded -> approaches 0%
+                relevance = round(100 / (1 + src.distance))
             formatted.append(
                 {
                     "source_path": src.source_path,
                     "preview": preview,
                     "distance": src.distance,
+                    "relevance_score": relevance,
                 }
             )
         return formatted
