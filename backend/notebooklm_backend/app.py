@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 
 from .config import AppConfig, get_settings
-from .routes import health, chat, documents, rag, notebooks, metrics, speech, export, agent, conversations
+from .routes import health, chat, documents, rag, notebooks, metrics, speech, export, agent, conversations, zotero
 from .services.chat import ChatService
 from .services.embeddings import create_embedding_backend
 from .services.ingestion import IngestionService
@@ -99,6 +99,7 @@ def create_app() -> FastAPI:
     app.include_router(export.router, prefix="/api")
     app.include_router(agent.router, prefix="/api")
     app.include_router(conversations.router, prefix="/api")
+    app.include_router(zotero.router, prefix="/api")
 
     @app.get("/api/config", tags=["config"])
     async def read_config() -> dict[str, object]:
