@@ -18,7 +18,7 @@ const FOLLOWUP_CHIPS = [
   'Simplify this',
 ];
 
-export function ChatView() {
+export function ChatView({ pendingSuggest, onSuggestConsumed }: { pendingSuggest?: string | null; onSuggestConsumed?: () => void } = {}) {
   const { messages, isStreaming, send, clearChat, abort } = useChat();
   const activeNotebookId = useAppStore((s) => s.activeNotebookId);
   const notebooks = useAppStore((s) => s.notebooks);
@@ -29,6 +29,15 @@ export function ChatView() {
 
   const [input, setInput] = useState('');
   const [isScrolledUp, setIsScrolledUp] = useState(false);
+
+  // Post-wizard auto-populate
+  useEffect(() => {
+    if (pendingSuggest && !input && messages.length === 0) {
+      setInput(pendingSuggest);
+      onSuggestConsumed?.();
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  }, [pendingSuggest]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 

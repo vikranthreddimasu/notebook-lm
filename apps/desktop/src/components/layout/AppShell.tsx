@@ -10,16 +10,62 @@ import DocumentPreview from '../../DocumentPreview';
 import { ToastContainer, showToast } from '../ui/Toast';
 import { DragOverlay } from '../ui/DragOverlay';
 import { ConnectionBanner } from '../ui/ConnectionBanner';
+import { SetupWizard } from '../ui/SetupWizard';
 import './layout.css';
+
+function isWizardComplete(): boolean {
+  return localStorage.getItem('notebook-lm-wizard-complete') === 'true';
+}
 
 export function AppShell() {
   const previewDocument = useAppStore((s) => s.previewDocument);
   const setPreviewDocument = useAppStore((s) => s.setPreviewDocument);
   const activeNotebookId = useAppStore((s) => s.activeNotebookId);
+  const status = useAppStore((s) => s.status);
 
   const { notebooks, refresh: refreshNotebooks } = useNotebooks();
 
+  const [showWizard, setShowWizard] = useState(false);
   const [resolvedPreviewUrl, setResolvedPreviewUrl] = useState<string | null>(null);
+  const [pendingSuggest, setPendingSuggest] = useState<string | null>(null);
+
+  // Check wizard on mount: show if not complete AND backend can't connect to Ollama
+  useEffect(() => {
+    if (isWizardComplete()) return;
+
+    // Check if Ollama is already set up by trying to fetch config
+    async function checkOllama() {
+      try {
+        const res = await fetch('http://127.0.0.1:11434/api/version', { signal: AbortSignal.timeout(2000) });
+        const tagsRes = await fetch('http://127.0.0.1:11434/api/tags', { signal: AbortSignal.timeout(2000) });
+        if (res.ok && tagsRes.ok) {
+          const data = await tagsRes.json();
+          if (data.models?.length > 0) {
+            // Ollama running with models, auto-complete wizard
+            localStorage.setItem('notebook-lm-wizard-complete', 'true');
+            return;
+          }
+        }
+      } catch {
+        // Can't reach Ollama
+      }
+      setShowWizard(true);
+    }
+
+    checkOllama();
+  }, []);
+
+  const handleWizardComplete = useCallback(() => {
+    setShowWizard(false);
+    refreshNotebooks();
+    // Post-wizard delight: suggest a first query
+    const store = useAppStore.getState();
+    const docs = store.documents;
+    if (store.activeNotebookId) {
+      // We'll set a pending suggestion that ChatView can pick up
+      setPendingSuggest('Summarize this document');
+    }
+  }, [refreshNotebooks]);
 
   useEffect(() => {
     if (previewDocument && activeNotebookId) {
@@ -56,6 +102,16 @@ export function AppShell() {
     await handleGlobalDrop(e.target.files);
     e.target.value = '';
   };
+
+  // Show wizard overlay
+  if (showWizard) {
+    return (
+      <>
+        <SetupWizard onComplete={handleWizardComplete} />
+        <ToastContainer />
+      </>
+    );
+  }
 
   const showWelcome = notebooks.length === 0 && !activeNotebookId;
 
@@ -94,7 +150,7 @@ export function AppShell() {
     <>
       <div className="app-shell">
         <Sidebar />
-        <ChatView />
+        <ChatView pendingSuggest={pendingSuggest} onSuggestConsumed={() => setPendingSuggest(null)} />
         <SourcePanel />
       </div>
 
