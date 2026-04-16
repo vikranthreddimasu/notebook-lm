@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
@@ -13,31 +13,65 @@ interface DocumentPreviewProps {
   onClose: () => void;
   documentUrl: string;
   filename: string;
+  highlightText?: string | null;
 }
 
-function DocumentPreview({ isOpen, onClose, documentUrl, filename }: DocumentPreviewProps) {
+function normalizeText(text: string): string {
+  return text.toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+function DocumentPreview({ isOpen, onClose, documentUrl, filename, highlightText }: DocumentPreviewProps) {
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [scale, setScale] = useState(1.2);
   const [showAllPages, setShowAllPages] = useState(false);
+  const [highlightPageFound, setHighlightPageFound] = useState(false);
 
   const isPdf = filename.toLowerCase().endsWith('.pdf');
+
+  // Search snippet: take first 60 chars of highlight text for matching
+  const searchSnippet = highlightText
+    ? normalizeText(highlightText).slice(0, 60)
+    : null;
 
   useEffect(() => {
     if (isOpen) {
       setPageNumber(1);
       setLoading(true);
       setError(null);
+      setHighlightPageFound(false);
     }
   }, [isOpen, documentUrl]);
 
-  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
-    setNumPages(numPages);
+  const onDocumentLoadSuccess = useCallback(async ({ numPages: np }: { numPages: number }) => {
+    setNumPages(np);
     setLoading(false);
     setError(null);
-  };
+
+    // If we have highlight text, find which page contains it
+    if (searchSnippet && isPdf) {
+      try {
+        const pdf = await pdfjs.getDocument(documentUrl).promise;
+        for (let i = 1; i <= np; i++) {
+          const page = await pdf.getPage(i);
+          const textContent = await page.getTextContent();
+          const pageText = normalizeText(
+            textContent.items.map((item: { str?: string }) => item.str || '').join(' ')
+          );
+          if (pageText.includes(searchSnippet)) {
+            setPageNumber(i);
+            setHighlightPageFound(true);
+            setShowAllPages(false);
+            break;
+          }
+        }
+      } catch {
+        // Failed to search, just show page 1
+      }
+    }
+  }, [searchSnippet, documentUrl, isPdf]);
 
   const onDocumentLoadError = (error: Error) => {
     setError(`Failed to load document: ${error.message}`);
@@ -66,6 +100,28 @@ function DocumentPreview({ isOpen, onClose, documentUrl, filename }: DocumentPre
     }
   };
 
+  // Custom text renderer that highlights matching text
+  const customTextRenderer = useCallback(
+    (textItem: { str: string }) => {
+      if (!searchSnippet) return textItem.str;
+
+      const normalizedItem = normalizeText(textItem.str);
+      // Check if this text item contains part of the search snippet
+      // Use a simpler word-overlap approach for partial matching
+      const words = searchSnippet.split(' ').filter((w) => w.length > 3);
+      if (words.length === 0) return textItem.str;
+
+      const matchCount = words.filter((w) => normalizedItem.includes(w)).length;
+      const matchRatio = matchCount / words.length;
+
+      if (matchRatio >= 0.3) {
+        return `<mark class="pdf-highlight">${textItem.str}</mark>`;
+      }
+      return textItem.str;
+    },
+    [searchSnippet],
+  );
+
   if (!isOpen) return null;
 
   return (
@@ -73,6 +129,9 @@ function DocumentPreview({ isOpen, onClose, documentUrl, filename }: DocumentPre
       <div className="document-preview-container" onClick={(e) => e.stopPropagation()}>
         <div className="document-preview-header">
           <h3 className="document-preview-title">{filename}</h3>
+          {highlightText && highlightPageFound && (
+            <span className="preview-highlight-badge">Source found on page {pageNumber}</span>
+          )}
           <div className="document-preview-controls">
             {isPdf && numPages && (
               <>
@@ -152,6 +211,7 @@ function DocumentPreview({ isOpen, onClose, documentUrl, filename }: DocumentPre
                       renderTextLayer={true}
                       renderAnnotationLayer={true}
                       className="preview-pdf-page"
+                      customTextRenderer={searchSnippet ? customTextRenderer : undefined}
                     />
                   ))}
                 </div>
@@ -163,6 +223,7 @@ function DocumentPreview({ isOpen, onClose, documentUrl, filename }: DocumentPre
                     renderTextLayer={true}
                     renderAnnotationLayer={true}
                     className="preview-pdf-page"
+                    customTextRenderer={searchSnippet ? customTextRenderer : undefined}
                   />
                 </div>
               )}
@@ -183,4 +244,3 @@ function DocumentPreview({ isOpen, onClose, documentUrl, filename }: DocumentPre
 }
 
 export default DocumentPreview;
-
