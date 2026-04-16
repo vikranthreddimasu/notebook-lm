@@ -227,7 +227,12 @@ export function SetupWizard({ onComplete }: { onComplete: () => void }) {
             <button
               type="button"
               className="wizard-btn wizard-btn-primary"
-              onClick={() => setStep('upload')}
+              onClick={() => {
+                if (selectedModel) {
+                  localStorage.setItem('notebook-lm-selected-model', selectedModel);
+                }
+                setStep('upload');
+              }}
               disabled={!selectedModel}
             >
               Continue

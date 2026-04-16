@@ -104,14 +104,8 @@ async def chat_stream_endpoint(request: Request, payload: ChatRequest) -> Stream
                     )
                 except Exception:
                     logger.warning("Failed to persist assistant message", exc_info=True)
-                    persist_warning = True
-
-            if persist_warning:
-                try:
-                    warning = {"type": "warning", "message": "Response received but couldn't be saved"}
-                    yield f"data: {json.dumps(warning)}\n\n"
-                except Exception:
-                    pass  # Generator may already be closed
+                    # Don't yield in finally: GeneratorExit is a BaseException, and
+                    # yielding after it raises RuntimeError. Log server-side only.
 
     return StreamingResponse(
         event_generator(),
