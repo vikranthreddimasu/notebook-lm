@@ -44,8 +44,7 @@ export function useChat() {
             const sources: SourceChunk[] = (event.sources ?? []).map((src) => ({
               ...src,
               document_name: src.source_path.split(/[/\\]/).pop() ?? src.source_path,
-              // Relevance score comes from backend normalization. No frontend calculation.
-              relevance_score: undefined,
+              relevance_score: (src as Record<string, unknown>).relevance_score as number | undefined,
             }));
             s.setActiveSources(sources);
             // Capture conversation_id from backend (created on first message)
