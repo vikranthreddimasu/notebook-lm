@@ -18,7 +18,7 @@ function matchScore(query: string, label: string): number {
   return 0;
 }
 
-export function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function CommandPalette({ open, onClose, onZoteroImport }: { open: boolean; onClose: () => void; onZoteroImport?: () => void }) {
   const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const notebooks = useAppStore((s) => s.notebooks);
@@ -87,6 +87,12 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
         onClose();
       },
     },
+    ...(onZoteroImport ? [{
+      id: 'action-zotero',
+      label: 'Import from Zotero',
+      section: 'Actions' as const,
+      onSelect: () => { onZoteroImport(); onClose(); },
+    }] : []),
   ];
 
   const filtered = query

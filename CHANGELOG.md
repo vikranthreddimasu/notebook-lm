@@ -2,6 +2,13 @@
 
 All notable changes to Notebook LM will be documented in this file.
 
+## [0.3.0.0] - 2026-04-15
+
+### Added
+- One-click Zotero library import. Hit Cmd+K, type "Zotero", select which collections to import, and your entire paper library becomes searchable notebooks. Each Zotero collection maps to one notebook.
+- Auto-detects Zotero data directory on macOS, Windows, and Linux. Opens the database read-only so your Zotero library is never modified.
+- Resolves PDF attachment paths from Zotero's storage directory and imports them through the existing ingestion pipeline (chunking, embedding, summarization).
+
 ## [0.2.0.0] - 2026-04-15
 
 ### Added

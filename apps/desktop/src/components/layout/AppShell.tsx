@@ -13,6 +13,7 @@ import { ConnectionBanner } from '../ui/ConnectionBanner';
 import { SetupWizard } from '../ui/SetupWizard';
 import { CommandPalette } from '../ui/CommandPalette';
 import { KeyboardShortcutsOverlay } from '../ui/KeyboardShortcuts';
+import { ZoteroImportDialog } from '../ui/ZoteroImport';
 import './layout.css';
 
 function isWizardComplete(): boolean {
@@ -32,6 +33,7 @@ export function AppShell() {
   const [pendingSuggest, setPendingSuggest] = useState<string | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [zoteroOpen, setZoteroOpen] = useState(false);
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -230,8 +232,9 @@ export function AppShell() {
       />
       <ConnectionBanner />
       <ToastContainer />
-      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} onZoteroImport={() => setZoteroOpen(true)} />
       <KeyboardShortcutsOverlay open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+      <ZoteroImportDialog open={zoteroOpen} onClose={() => setZoteroOpen(false)} />
     </>
   );
 }
