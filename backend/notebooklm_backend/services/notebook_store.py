@@ -25,10 +25,14 @@ class NotebookStore:
     def _connect(self) -> Iterable[sqlite3.Connection]:
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys = ON")
         try:
             yield conn
-        finally:
             conn.commit()
+        except BaseException:
+            conn.rollback()
+            raise
+        finally:
             conn.close()
 
     def _init_db(self) -> None:

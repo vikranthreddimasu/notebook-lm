@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../../store/app-store';
 import { useNotebooks } from '../../hooks/useNotebooks';
 import { useDocuments } from '../../hooks/useDocuments';
+import { useConversations } from '../../hooks/useConversations';
 import { DocumentCard } from '../documents/DocumentCard';
 import { showToast } from '../ui/Toast';
 import { deleteNotebook } from '../../api';
@@ -21,20 +22,35 @@ function notebookColor(id: string): string {
   return NOTEBOOK_COLORS[Math.abs(hash) % NOTEBOOK_COLORS.length];
 }
 
+const MAX_VISIBLE_CONVERSATIONS = 5;
+
 export function Sidebar() {
   const { notebooks, activeNotebookId, select, refresh: refreshNotebooks } = useNotebooks();
   const { documents, upload } = useDocuments();
+  const { conversations, activeConversationId, loadConversation, deleteConversation: deleteConv, renameConversation: renameConv } = useConversations();
   const status = useAppStore((s) => s.status);
   const setPreviewDocument = useAppStore((s) => s.setPreviewDocument);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; notebookId: string } | null>(null);
+  const [convMenu, setConvMenu] = useState<{ x: number; y: number; conversationId: string } | null>(null);
+  const [showAllConversations, setShowAllConversations] = useState(false);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+  const renameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (!contextMenu) return;
-    const handler = () => setContextMenu(null);
+    if (!contextMenu && !convMenu) return;
+    const handler = () => { setContextMenu(null); setConvMenu(null); };
     window.addEventListener('click', handler);
     return () => window.removeEventListener('click', handler);
-  }, [contextMenu]);
+  }, [contextMenu, convMenu]);
+
+  useEffect(() => {
+    if (renamingId && renameInputRef.current) {
+      renameInputRef.current.focus();
+      renameInputRef.current.select();
+    }
+  }, [renamingId]);
 
   const handleDeleteNotebook = async (notebookId: string) => {
     try {
@@ -68,6 +84,17 @@ export function Sidebar() {
     }
     e.target.value = '';
   };
+
+  const handleRenameSubmit = (conversationId: string) => {
+    if (renameValue.trim()) {
+      renameConv(conversationId, renameValue.trim());
+    }
+    setRenamingId(null);
+  };
+
+  const visibleConversations = showAllConversations
+    ? conversations
+    : conversations.slice(0, MAX_VISIBLE_CONVERSATIONS);
 
   return (
     <aside className="sidebar">
@@ -107,6 +134,76 @@ export function Sidebar() {
           <p className="sidebar-empty">Drop a file anywhere or click + New to start.</p>
         )}
       </div>
+
+      {activeNotebookId && conversations.length > 0 && (
+        <>
+          <div className="sidebar-section-title">
+            <span>Conversations</span>
+          </div>
+          <div className="sidebar-conversations">
+            {visibleConversations.map((conv) => (
+              <button
+                key={conv.id}
+                type="button"
+                className={`sidebar-conversation ${conv.id === activeConversationId ? 'active' : ''}`}
+                onClick={() => loadConversation(conv.id)}
+              >
+                {renamingId === conv.id ? (
+                  <input
+                    ref={renameInputRef}
+                    className="sidebar-conversation-rename"
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    onBlur={() => handleRenameSubmit(conv.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleRenameSubmit(conv.id);
+                      if (e.key === 'Escape') setRenamingId(null);
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                ) : (
+                  <>
+                    <span className="sidebar-conversation-title">
+                      {conv.title || 'Untitled'}
+                    </span>
+                    <span className="sidebar-conversation-time">
+                      {timeAgo(conv.updated_at)}
+                    </span>
+                    <button
+                      type="button"
+                      className="sidebar-conversation-menu-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setConvMenu({ x: e.clientX, y: e.clientY, conversationId: conv.id });
+                      }}
+                    >
+                      ...
+                    </button>
+                  </>
+                )}
+              </button>
+            ))}
+            {conversations.length > MAX_VISIBLE_CONVERSATIONS && !showAllConversations && (
+              <button
+                type="button"
+                className="sidebar-show-all-btn"
+                onClick={() => setShowAllConversations(true)}
+              >
+                Show all ({conversations.length})
+              </button>
+            )}
+            {showAllConversations && conversations.length > MAX_VISIBLE_CONVERSATIONS && (
+              <button
+                type="button"
+                className="sidebar-show-all-btn"
+                onClick={() => setShowAllConversations(false)}
+              >
+                Show less
+              </button>
+            )}
+          </div>
+        </>
+      )}
 
       {activeNotebookId && (
         <>
@@ -157,6 +254,36 @@ export function Sidebar() {
             onClick={() => handleDeleteNotebook(contextMenu.notebookId)}
           >
             Delete notebook
+          </button>
+        </div>
+      )}
+
+      {convMenu && (
+        <div
+          className="context-menu"
+          style={{ top: convMenu.y, left: convMenu.x }}
+        >
+          <button
+            type="button"
+            className="context-menu-item"
+            onClick={() => {
+              const conv = conversations.find((c) => c.id === convMenu.conversationId);
+              setRenameValue(conv?.title || '');
+              setRenamingId(convMenu.conversationId);
+              setConvMenu(null);
+            }}
+          >
+            Rename
+          </button>
+          <button
+            type="button"
+            className="context-menu-item context-menu-danger"
+            onClick={() => {
+              deleteConv(convMenu.conversationId);
+              setConvMenu(null);
+            }}
+          >
+            Delete
           </button>
         </div>
       )}

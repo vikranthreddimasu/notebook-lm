@@ -9,6 +9,8 @@ import type {
   AgentPlanResponse,
   ChatMessage,
   Notebook,
+  Conversation,
+  PersistedMessage,
 } from './types';
 
 declare global {
@@ -263,5 +265,28 @@ export async function requestAgentPlan(goal: string, notebookId?: string | null)
   return request<AgentPlanResponse>('/agent/plan', {
     method: 'POST',
     body: JSON.stringify({ goal, notebook_id: notebookId ?? null }),
+  });
+}
+
+// ── Conversations ─────────────────────────────────────────
+
+export function listConversations(notebookId: string): Promise<Conversation[]> {
+  return request<Conversation[]>(`/conversations/?notebook_id=${encodeURIComponent(notebookId)}`);
+}
+
+export function getConversationMessages(conversationId: string): Promise<PersistedMessage[]> {
+  return request<PersistedMessage[]>(`/conversations/${encodeURIComponent(conversationId)}/messages`);
+}
+
+export function deleteConversation(conversationId: string): Promise<{ status: string }> {
+  return request<{ status: string }>(`/conversations/${encodeURIComponent(conversationId)}`, {
+    method: 'DELETE',
+  });
+}
+
+export function renameConversation(conversationId: string, title: string): Promise<Conversation> {
+  return request<Conversation>(`/conversations/${encodeURIComponent(conversationId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ title }),
   });
 }

@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 
 from .config import AppConfig, get_settings
-from .routes import health, chat, documents, rag, notebooks, metrics, speech, export, agent
+from .routes import health, chat, documents, rag, notebooks, metrics, speech, export, agent, conversations
 from .services.chat import ChatService
 from .services.embeddings import create_embedding_backend
 from .services.ingestion import IngestionService
@@ -13,6 +13,7 @@ from .services.rag import RAGService
 from .services.rag_llamaindex import LlamaIndexRAGService
 from .services.vector_store import create_vector_store
 from .services.notebook_store import NotebookStore
+from .services.conversation_store import ConversationStore
 from .services.metrics_store import MetricsStore
 from .services.speech import SpeechService
 from .services.agent import AgentService
@@ -57,6 +58,9 @@ def create_app() -> FastAPI:
     metrics_store = MetricsStore(settings)
     agent_service = AgentService(settings)
 
+    conversation_store = ConversationStore(settings)
+    app.state.conversation_store = conversation_store
+
     app.state.chat_service = ChatService(
         create_llm_backend(settings),
         settings,
@@ -94,6 +98,7 @@ def create_app() -> FastAPI:
     app.include_router(speech.router, prefix="/api")
     app.include_router(export.router, prefix="/api")
     app.include_router(agent.router, prefix="/api")
+    app.include_router(conversations.router, prefix="/api")
 
     @app.get("/api/config", tags=["config"])
     async def read_config() -> dict[str, object]:

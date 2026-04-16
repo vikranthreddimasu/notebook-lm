@@ -7,6 +7,7 @@ export interface ChatRequest {
   prompt: string;
   history?: ChatMessage[];
   notebook_id?: string | null;
+  conversation_id?: string | null;
 }
 
 export interface ChatResponse {
@@ -27,10 +28,12 @@ export type ChatStreamEvent =
       provider: string;
       sources: StreamSource[];
       metrics?: Record<string, number>;
+      conversation_id?: string;
     }
   | { type: 'token'; delta: string }
   | { type: 'done'; reply: string; metrics?: Record<string, number> }
-  | { type: 'error'; message: string };
+  | { type: 'error'; message: string }
+  | { type: 'warning'; message: string };
 
 export interface MetricsSummary {
   conversations: number;
@@ -94,4 +97,21 @@ export interface SourceChunk {
 
 export interface CreateNotebookRequest {
   title?: string;
+}
+
+export interface Conversation {
+  id: string;
+  notebook_id: string;
+  title: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PersistedMessage {
+  id: string;
+  conversation_id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  sources: SourceChunk[] | null;
+  created_at: string;
 }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from 'react';
 import { useAppStore } from '../store/app-store';
 import { listNotebooks, createNotebook } from '../api';
+import { showToast } from '../components/ui/Toast';
 
 export function useNotebooks() {
   const notebooks = useAppStore((s) => s.notebooks);
@@ -37,6 +38,10 @@ export function useNotebooks() {
 
   const select = useCallback(
     (id: string | null) => {
+      const store = useAppStore.getState();
+      if (store.activeConversationId && store.messages.length > 0) {
+        showToast('Conversation saved', 'success');
+      }
       setActiveNotebookId(id);
     },
     [setActiveNotebookId],
