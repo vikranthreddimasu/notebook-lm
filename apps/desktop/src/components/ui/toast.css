@@ -21,6 +21,7 @@
   box-shadow: var(--shadow-lg);
   animation: toastIn 200ms var(--ease-out), toastOut 300ms 3.7s var(--ease-out) forwards;
   pointer-events: auto;
+  cursor: pointer;
 }
 
 .toast-success {

@@ -9,9 +9,18 @@ import { deleteNotebook } from '../../api';
 import { timeAgo } from '../../utils/timeAgo';
 import './layout.css';
 
+// Lazy Scholar palette: warm, muted tones that match the stone-sage design system
 const NOTEBOOK_COLORS = [
-  '#818cf8', '#f472b6', '#34d399', '#fbbf24', '#60a5fa',
-  '#a78bfa', '#fb923c', '#2dd4bf', '#f87171', '#a3e635',
+  '#7c9a82', // sage (primary accent)
+  '#b8977e', // warm tan
+  '#8b9eb0', // slate blue
+  '#c9956b', // amber stone
+  '#9b8ba0', // dusty mauve
+  '#7ea898', // sea glass
+  '#b09070', // clay
+  '#8a9a70', // olive
+  '#a08090', // muted rose
+  '#80a0a0', // teal stone
 ];
 
 function notebookColor(id: string): string {

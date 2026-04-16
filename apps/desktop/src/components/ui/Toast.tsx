@@ -7,6 +7,8 @@ interface ToastItem {
   type: 'info' | 'success' | 'error';
 }
 
+const MAX_VISIBLE = 3;
+
 let toastListeners: ((toast: ToastItem) => void)[] = [];
 
 export function showToast(message: string, type: ToastItem['type'] = 'info') {
@@ -17,9 +19,17 @@ export function showToast(message: string, type: ToastItem['type'] = 'info') {
 export function ToastContainer() {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
+  const dismiss = (id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
+
   useEffect(() => {
     const handler = (toast: ToastItem) => {
-      setToasts((prev) => [...prev, toast]);
+      setToasts((prev) => {
+        const next = [...prev, toast];
+        // Stack limit: keep only the newest MAX_VISIBLE
+        return next.slice(-MAX_VISIBLE);
+      });
       setTimeout(() => {
         setToasts((prev) => prev.filter((t) => t.id !== toast.id));
       }, 4000);
@@ -35,7 +45,12 @@ export function ToastContainer() {
   return (
     <div className="toast-container">
       {toasts.map((toast) => (
-        <div key={toast.id} className={`toast toast-${toast.type}`}>
+        <div
+          key={toast.id}
+          className={`toast toast-${toast.type}`}
+          onClick={() => dismiss(toast.id)}
+          role="status"
+        >
           {toast.message}
         </div>
       ))}

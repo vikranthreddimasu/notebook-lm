@@ -75,25 +75,7 @@ export function ChatView({ pendingSuggest, onSuggestConsumed }: { pendingSuggest
     }
   };
 
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.metaKey && e.key === '/') {
-        e.preventDefault();
-        toggleSourcePanel();
-      }
-      if (e.metaKey && e.shiftKey && e.key === 'e') {
-        e.preventDefault();
-        if (messages.length > 0) handleExport();
-      }
-      // Cmd+N — new chat
-      if (e.metaKey && e.key === 'n') {
-        e.preventDefault();
-        clearChat();
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [toggleSourcePanel, messages, clearChat]);
+  // Keyboard shortcuts moved to AppShell (global handler)
 
   const handleInput = () => {
     const el = inputRef.current;
