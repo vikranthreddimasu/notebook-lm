@@ -78,6 +78,17 @@
   transform: scale(0.97);
 }
 
+.chat-header-btn-active {
+  background: var(--color-accent);
+  color: #0c0a09;
+  border-color: var(--color-accent);
+}
+
+.chat-header-btn-active:hover {
+  background: var(--color-accent-hover);
+  color: #0c0a09;
+}
+
 /* ---- Message area ---- */
 
 .chat-messages {

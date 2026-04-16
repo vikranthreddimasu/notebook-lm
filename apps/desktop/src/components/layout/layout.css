@@ -441,6 +441,16 @@
   box-shadow: var(--shadow-md);
 }
 
+.source-card-notebook {
+  display: block;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--color-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
+}
+
 .source-card-name {
   font-size: var(--text-sm);
   font-weight: 550;

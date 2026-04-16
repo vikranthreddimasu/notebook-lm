@@ -2,6 +2,13 @@
 
 All notable changes to Notebook LM will be documented in this file.
 
+## [0.2.0.0] - 2026-04-15
+
+### Added
+- Cross-document synthesis: click "All" in the chat header to query across every notebook at once. Ask "what do these papers disagree about?" and get a sourced answer that names which notebook and document each claim came from.
+- Source panel now shows notebook labels when in cross-notebook mode, so you can trace every answer back to its origin.
+- LLM prompt explicitly instructs the model to compare, contrast, and name disagreements across sources from different notebooks.
+
 ## [0.1.1.0] - 2026-04-15
 
 ### Added

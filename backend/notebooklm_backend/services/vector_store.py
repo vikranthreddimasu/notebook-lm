@@ -74,6 +74,62 @@ class VectorStoreManager:
                 pass
         return collection.query(**query_kwargs)
     
+    def query_across_notebooks(
+        self,
+        notebook_ids: list[str],
+        query: str,
+        top_k: int = 5,
+    ) -> dict:
+        """
+        Query multiple notebook collections and merge results ranked by distance.
+        Returns the same format as a single query() call but with an extra
+        'notebook_id' field in each metadata entry.
+        """
+        query_emb = self.embedding_backend.embed([query])
+
+        all_documents: list[str] = []
+        all_metadatas: list[dict] = []
+        all_distances: list[float] = []
+
+        for nb_id in notebook_ids:
+            try:
+                collection = self.client.get_collection(name=self._collection_name(nb_id))
+            except Exception:
+                continue  # notebook collection doesn't exist yet
+
+            if collection.count() == 0:
+                continue
+
+            result = collection.query(
+                query_embeddings=query_emb,
+                n_results=min(top_k, collection.count()),
+            )
+
+            docs = result.get("documents", [[]])[0]
+            metas = result.get("metadatas", [[]])[0]
+            dists = result.get("distances", [[]])[0] if result.get("distances") else []
+
+            for i, (doc, meta) in enumerate(zip(docs, metas)):
+                meta_with_nb = {**(meta if isinstance(meta, dict) else {}), "notebook_id": nb_id}
+                all_documents.append(doc)
+                all_metadatas.append(meta_with_nb)
+                all_distances.append(dists[i] if i < len(dists) else float("inf"))
+
+        # Sort by distance (best matches first) and take top_k
+        if not all_documents:
+            return {"documents": [[]], "metadatas": [[]], "distances": [[]]}
+
+        ranked = sorted(
+            zip(all_documents, all_metadatas, all_distances),
+            key=lambda x: x[2],
+        )[:top_k]
+
+        return {
+            "documents": [[r[0] for r in ranked]],
+            "metadatas": [[r[1] for r in ranked]],
+            "distances": [[r[2] for r in ranked]],
+        }
+
     def _doc_summaries_collection_name(self, notebook_id: str) -> str:
         """Get the name of the document summaries collection."""
         return f"notebook_{notebook_id}_summaries"

@@ -24,6 +24,8 @@ export function ChatView({ pendingSuggest, onSuggestConsumed }: { pendingSuggest
   const notebooks = useAppStore((s) => s.notebooks);
   const toggleSourcePanel = useAppStore((s) => s.toggleSourcePanel);
   const status = useAppStore((s) => s.status);
+  const crossNotebookMode = useAppStore((s) => s.crossNotebookMode);
+  const setCrossNotebookMode = useAppStore((s) => s.setCrossNotebookMode);
 
   const activeNotebook = notebooks.find((nb) => nb.notebook_id === activeNotebookId) ?? null;
 
@@ -113,14 +115,31 @@ export function ChatView({ pendingSuggest, onSuggestConsumed }: { pendingSuggest
     <div className="chat-view">
       <div className="chat-header">
         <div className="chat-header-title">
-          <h2>{activeNotebook ? activeNotebook.title : 'Notebook LM'}</h2>
-          {activeNotebook && (
+          <h2>{crossNotebookMode ? 'All Notebooks' : (activeNotebook ? activeNotebook.title : 'Notebook LM')}</h2>
+          {crossNotebookMode ? (
+            <span className="chat-header-meta">
+              {notebooks.length} {notebooks.length === 1 ? 'notebook' : 'notebooks'}
+            </span>
+          ) : activeNotebook ? (
             <span className="chat-header-meta">
               {activeNotebook.source_count} {activeNotebook.source_count === 1 ? 'doc' : 'docs'}
             </span>
-          )}
+          ) : null}
         </div>
         <div className="chat-header-actions">
+          {notebooks.length > 1 && (
+            <button
+              type="button"
+              className={`chat-header-btn ${crossNotebookMode ? 'chat-header-btn-active' : ''}`}
+              onClick={() => {
+                setCrossNotebookMode(!crossNotebookMode);
+                clearChat();
+              }}
+              title={crossNotebookMode ? 'Switch to single notebook' : 'Query across all notebooks'}
+            >
+              {crossNotebookMode ? 'Single' : 'All'}
+            </button>
+          )}
           {messages.length > 0 && (
             <button type="button" className="chat-header-btn" onClick={clearChat}>
               New chat

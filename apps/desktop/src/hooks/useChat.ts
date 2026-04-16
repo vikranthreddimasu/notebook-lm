@@ -30,10 +30,13 @@ export function useChat() {
       store.setIsStreaming(true);
       store.setActiveSources([]);
 
+      // Cross-notebook mode: send all notebook IDs instead of just one
+      const crossMode = store.crossNotebookMode;
       const body = {
         prompt,
         history,
-        notebook_id: store.activeNotebookId,
+        notebook_id: crossMode ? null : store.activeNotebookId,
+        notebook_ids: crossMode ? store.notebooks.map((nb) => nb.notebook_id) : null,
         conversation_id: store.activeConversationId,
       };
 

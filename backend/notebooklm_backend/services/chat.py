@@ -89,6 +89,7 @@ class ChatService:
         prompt: str,
         history: Iterable[ChatMessage] | None = None,
         notebook_id: str | None = None,
+        notebook_ids: list[str] | None = None,
     ) -> AsyncIterator[dict[str, Any]]:
         """
         Stream tokens using SSE-friendly event payloads:
@@ -101,7 +102,42 @@ class ChatService:
         sources: list[dict[str, Any]] = []
         rag_context: RAGContext | None = None
 
-        if notebook_id and self._rag_service:
+        # Cross-notebook synthesis mode
+        if notebook_ids and len(notebook_ids) > 1 and self._rag_service:
+            try:
+                full_question = prompt
+                if history:
+                    recent_context = "\n".join([f"{msg.role}: {msg.content}" for msg in list(history)[-3:]])
+                    full_question = f"Previous conversation:\n{recent_context}\n\nCurrent question: {prompt}"
+                context = await self._rag_service.prepare_prompt_cross_notebook(
+                    notebook_ids=notebook_ids,
+                    question=full_question,
+                    top_k=20,
+                )
+                metrics.update(context.metrics)
+                prompt_text = context.prompt or None
+                sources = self._format_sources(context.sources)
+                rag_context = context
+                if not prompt_text:
+                    yield {
+                        "type": "meta",
+                        "provider": self.provider,
+                        "sources": sources,
+                        "metrics": metrics or None,
+                    }
+                    yield {
+                        "type": "done",
+                        "reply": "No relevant documents found across the selected notebooks.",
+                        "metrics": metrics or None,
+                    }
+                    return
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Cross-notebook RAG failed: {e}", exc_info=True)
+                prompt_text = None
+                metrics = {}
+        elif notebook_id and self._rag_service:
             try:
                 full_question = prompt
                 if history:
@@ -202,14 +238,15 @@ class ChatService:
             if src.distance is not None:
                 # L2 distance normalization: 0 -> 100%, unbounded -> approaches 0%
                 relevance = round(100 / (1 + src.distance))
-            formatted.append(
-                {
-                    "source_path": src.source_path,
-                    "preview": preview,
-                    "distance": src.distance,
-                    "relevance_score": relevance,
-                }
-            )
+            entry: dict[str, Any] = {
+                "source_path": src.source_path,
+                "preview": preview,
+                "distance": src.distance,
+                "relevance_score": relevance,
+            }
+            if src.notebook_id:
+                entry["notebook_id"] = src.notebook_id
+            formatted.append(entry)
         return formatted
 
     def _record_metrics(

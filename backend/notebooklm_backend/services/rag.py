@@ -15,6 +15,7 @@ class SourceAttribution:
     source_path: str
     content: str
     distance: float | None
+    notebook_id: str | None = None
 
 
 @dataclass
@@ -201,3 +202,82 @@ class RAGService:
             metrics["total_ms"] = metrics.get("total_ms", 0.0) + metrics["llm_ms"]
 
         return RAGResponse(answer=answer, sources=context.sources, metrics=metrics)
+
+    async def prepare_prompt_cross_notebook(
+        self,
+        notebook_ids: list[str],
+        question: str,
+        top_k: int = 20,
+    ) -> RAGContext:
+        """Prepare a prompt that retrieves and synthesizes across multiple notebooks."""
+        total_start = time.perf_counter()
+        metrics: dict[str, float] = {}
+
+        retrieval_start = time.perf_counter()
+        query_results = self.vector_store.query_across_notebooks(
+            notebook_ids=notebook_ids,
+            query=question,
+            top_k=top_k,
+        )
+        metrics["retrieval_ms"] = (time.perf_counter() - retrieval_start) * 1000
+
+        documents = query_results.get("documents", [[]])[0]
+        metadatas = query_results.get("metadatas", [[]])[0]
+        distances = query_results.get("distances", [[]])[0]
+
+        if not documents:
+            return RAGContext(prompt="", sources=[], metrics=metrics)
+
+        # Group chunks by notebook + source file
+        source_groups: dict[str, list[tuple[int, str, str]]] = {}
+        for idx, (doc, metadata) in enumerate(zip(documents, metadatas)):
+            nb_id = metadata.get("notebook_id", "unknown") if isinstance(metadata, dict) else "unknown"
+            source_path = metadata.get("source_path", "unknown") if isinstance(metadata, dict) else "unknown"
+            key = f"{nb_id}::{source_path}"
+            if key not in source_groups:
+                source_groups[key] = []
+            source_groups[key].append((idx, doc, nb_id))
+
+        # Build prompt with notebook labels
+        prompt_parts = []
+        for key, chunks in source_groups.items():
+            nb_id, source_path = key.split("::", 1)
+            source_name = Path(source_path).name if source_path != "unknown" else "Document"
+            prompt_parts.append(f"From notebook '{nb_id}', document '{source_name}':")
+            for idx, doc, _ in chunks:
+                prompt_parts.append(f"  [Source {idx+1}]: {doc}")
+            prompt_parts.append("")
+
+        prompt_context = "\n".join(prompt_parts)
+        notebook_count = len(set(
+            m.get("notebook_id", "?") for m in metadatas if isinstance(m, dict)
+        ))
+
+        prompt = (
+            "You are answering a question by synthesizing information ACROSS MULTIPLE NOTEBOOKS.\n"
+            f"You have access to {notebook_count} notebooks with excerpts from various documents.\n"
+            "Rules:\n"
+            "- Compare and contrast information from different notebooks and documents.\n"
+            "- When sources from different notebooks disagree, name the disagreement explicitly.\n"
+            "- When citing, reference which notebook and document the information came from.\n"
+            "- If the answer is not present in the excerpts, "
+            "reply: 'I could not find this across the provided notebooks.'\n\n"
+            f"Excerpts grouped by notebook and document:\n{prompt_context}\n"
+            f"Question: {question}\n\n"
+            "Answer (synthesize across all sources):"
+        )
+
+        sources = [
+            SourceAttribution(
+                source_path=metadata.get("source_path", "unknown") if isinstance(metadata, dict) else "unknown",
+                content=document,
+                distance=distances[idx] if idx < len(distances) else None,
+                notebook_id=metadata.get("notebook_id") if isinstance(metadata, dict) else None,
+            )
+            for idx, (document, metadata) in enumerate(zip(documents, metadatas))
+        ]
+
+        metrics["prep_ms"] = (time.perf_counter() - total_start) * 1000
+        metrics["total_ms"] = metrics["prep_ms"]
+        metrics["notebooks_queried"] = float(len(notebook_ids))
+        return RAGContext(prompt=prompt, sources=sources, metrics=metrics)
