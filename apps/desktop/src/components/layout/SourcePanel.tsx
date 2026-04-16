@@ -7,7 +7,11 @@ function relevanceColor(score: number): string {
   return '#a8a29e'; // muted gray
 }
 
-export function SourcePanel() {
+interface SourcePanelProps {
+  onSourceClick?: (sourcePath: string, highlightText: string) => void;
+}
+
+export function SourcePanel({ onSourceClick }: SourcePanelProps) {
   const activeSources = useAppStore((s) => s.activeSources);
   const crossNotebookMode = useAppStore((s) => s.crossNotebookMode);
   const notebooks = useAppStore((s) => s.notebooks);
@@ -27,7 +31,13 @@ export function SourcePanel() {
           const nbName = nbId ? notebooks.find((nb) => nb.notebook_id === nbId)?.title : null;
 
           return (
-            <div key={`${source.source_path}-${i}`} className="source-card">
+            <div
+              key={`${source.source_path}-${i}`}
+              className={`source-card ${onSourceClick ? 'source-card-clickable' : ''}`}
+              onClick={() => onSourceClick?.(source.source_path, source.preview)}
+              role={onSourceClick ? 'button' : undefined}
+              tabIndex={onSourceClick ? 0 : undefined}
+            >
               {crossNotebookMode && nbName && (
                 <span className="source-card-notebook">{nbName}</span>
               )}
@@ -44,6 +54,9 @@ export function SourcePanel() {
                 </div>
               )}
               <p className="source-card-preview">{source.preview}</p>
+              {onSourceClick && (
+                <span className="source-card-view-hint">Click to view in document</span>
+              )}
             </div>
           );
         })}

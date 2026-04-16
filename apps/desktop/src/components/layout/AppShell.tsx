@@ -34,6 +34,7 @@ export function AppShell() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [zoteroOpen, setZoteroOpen] = useState(false);
+  const [highlightText, setHighlightText] = useState<string | null>(null);
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -214,15 +215,25 @@ export function AppShell() {
       <div className="app-shell">
         <Sidebar />
         <ChatView pendingSuggest={pendingSuggest} onSuggestConsumed={() => setPendingSuggest(null)} />
-        <SourcePanel />
+        <SourcePanel onSourceClick={async (sourcePath, preview) => {
+          if (!activeNotebookId) return;
+          try {
+            const url = await getDocumentPreviewUrl(activeNotebookId, sourcePath);
+            const filename = sourcePath.split(/[/\\]/).pop() ?? sourcePath;
+            setResolvedPreviewUrl(url);
+            setHighlightText(preview);
+            setPreviewDocument({ filename, source_path: sourcePath, chunk_count: 0, preview: '' });
+          } catch {}
+        }} />
       </div>
 
       {previewDocument && activeNotebookId && resolvedPreviewUrl && (
         <DocumentPreview
           isOpen={true}
-          onClose={() => setPreviewDocument(null)}
+          onClose={() => { setPreviewDocument(null); setHighlightText(null); }}
           documentUrl={resolvedPreviewUrl}
           filename={previewDocument.filename}
+          highlightText={highlightText}
         />
       )}
 

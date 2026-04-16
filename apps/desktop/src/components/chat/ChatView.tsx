@@ -5,6 +5,7 @@ import { exportConversation } from '../../api';
 import { MessageBubble } from './MessageBubble';
 import { QuickChips } from './QuickChips';
 import { OverflowMenu } from '../ui/OverflowMenu';
+import { downloadBibtex } from '../../utils/bibtex';
 import './chat.css';
 
 const EMPTY_CHIPS = [
@@ -103,8 +104,18 @@ export function ChatView({ pendingSuggest, onSuggestConsumed }: { pendingSuggest
     }
   };
 
+  const activeSources = useAppStore((s) => s.activeSources);
+
+  const handleExportBibtex = () => {
+    if (activeSources.length > 0) {
+      const title = activeNotebook?.title || 'Notebook LM';
+      downloadBibtex(activeSources, title);
+    }
+  };
+
   const overflowItems = [
     { label: 'Export conversation', onClick: handleExport, disabled: messages.length === 0 },
+    { label: 'Export BibTeX', onClick: handleExportBibtex, disabled: activeSources.length === 0 },
     { label: 'Toggle sources', onClick: toggleSourcePanel },
     { label: 'Clear chat', onClick: clearChat, disabled: messages.length === 0 },
   ];
