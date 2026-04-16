@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../../store/app-store';
 import { useNotebooks } from '../../hooks/useNotebooks';
-import { uploadDocument } from '../../api';
+import { uploadDocument, exportConversation } from '../../api';
 import { Sidebar } from './Sidebar';
 import { SourcePanel } from './SourcePanel';
 import { ChatView } from '../chat/ChatView';
@@ -11,6 +11,8 @@ import { ToastContainer, showToast } from '../ui/Toast';
 import { DragOverlay } from '../ui/DragOverlay';
 import { ConnectionBanner } from '../ui/ConnectionBanner';
 import { SetupWizard } from '../ui/SetupWizard';
+import { CommandPalette } from '../ui/CommandPalette';
+import { KeyboardShortcutsOverlay } from '../ui/KeyboardShortcuts';
 import './layout.css';
 
 function isWizardComplete(): boolean {
@@ -28,12 +30,64 @@ export function AppShell() {
   const [showWizard, setShowWizard] = useState(false);
   const [resolvedPreviewUrl, setResolvedPreviewUrl] = useState<string | null>(null);
   const [pendingSuggest, setPendingSuggest] = useState<string | null>(null);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
 
-  // Check wizard on mount: show if not complete AND backend can't connect to Ollama
+  // Global keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      // Cmd+K — command palette
+      if (e.metaKey && e.key === 'k') {
+        e.preventDefault();
+        setPaletteOpen((v) => !v);
+        return;
+      }
+      // Cmd+/ — toggle source panel
+      if (e.metaKey && e.key === '/') {
+        e.preventDefault();
+        useAppStore.getState().toggleSourcePanel();
+        return;
+      }
+      // Cmd+Shift+E — export conversation
+      if (e.metaKey && e.shiftKey && e.key === 'e') {
+        e.preventDefault();
+        const msgs = useAppStore.getState().messages;
+        if (msgs.length > 0) {
+          exportConversation('Notebook LM Conversation', msgs);
+        }
+        return;
+      }
+      // Cmd+N — new chat
+      if (e.metaKey && e.key === 'n') {
+        e.preventDefault();
+        const s = useAppStore.getState();
+        s.clearMessages();
+        s.setActiveConversationId(null);
+        return;
+      }
+      // ? — keyboard shortcuts (only when not typing in an input)
+      if (e.key === '?' && !paletteOpen) {
+        const tag = (e.target as HTMLElement)?.tagName;
+        if (tag !== 'INPUT' && tag !== 'TEXTAREA') {
+          e.preventDefault();
+          setShortcutsOpen((v) => !v);
+          return;
+        }
+      }
+      // Escape — close overlays
+      if (e.key === 'Escape') {
+        if (shortcutsOpen) { setShortcutsOpen(false); return; }
+        if (paletteOpen) { setPaletteOpen(false); return; }
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [paletteOpen, shortcutsOpen]);
+
+  // Check wizard on mount
   useEffect(() => {
     if (isWizardComplete()) return;
 
-    // Check if Ollama is already set up by trying to fetch config
     async function checkOllama() {
       try {
         const res = await fetch('http://127.0.0.1:11434/api/version', { signal: AbortSignal.timeout(2000) });
@@ -41,7 +95,6 @@ export function AppShell() {
         if (res.ok && tagsRes.ok) {
           const data = await tagsRes.json();
           if (data.models?.length > 0) {
-            // Ollama running with models, auto-complete wizard
             localStorage.setItem('notebook-lm-wizard-complete', 'true');
             return;
           }
@@ -58,11 +111,8 @@ export function AppShell() {
   const handleWizardComplete = useCallback(() => {
     setShowWizard(false);
     refreshNotebooks();
-    // Post-wizard delight: suggest a first query
     const store = useAppStore.getState();
-    const docs = store.documents;
     if (store.activeNotebookId) {
-      // We'll set a pending suggestion that ChatView can pick up
       setPendingSuggest('Summarize this document');
     }
   }, [refreshNotebooks]);
@@ -138,6 +188,17 @@ export function AppShell() {
               style={{ display: 'none' }}
             />
             <p className="welcome-hint">or drag files anywhere on this window</p>
+            <div className="welcome-tips">
+              <span className="welcome-tip">PDF, Word, PowerPoint, Markdown</span>
+              <span className="welcome-tip-sep" />
+              <span className="welcome-tip">100% offline</span>
+              <span className="welcome-tip-sep" />
+              <span className="welcome-tip">&#x2318;K to search</span>
+            </div>
+            <div className={`welcome-status ${status}`}>
+              <span className="welcome-status-dot" />
+              <span>{status === 'ready' ? 'Ollama connected' : status === 'error' ? 'Offline' : 'Connecting...'}</span>
+            </div>
           </div>
         </div>
         <DragOverlay onDrop={handleGlobalDrop} />
@@ -169,6 +230,8 @@ export function AppShell() {
       />
       <ConnectionBanner />
       <ToastContainer />
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+      <KeyboardShortcutsOverlay open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
     </>
   );
 }
