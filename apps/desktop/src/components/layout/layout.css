@@ -548,6 +548,47 @@
   margin: var(--space-3) 0 0;
 }
 
+.welcome-tips {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-6);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.welcome-tip-sep {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--color-text-muted);
+  opacity: 0.4;
+}
+
+.welcome-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.welcome-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-text-muted);
+}
+
+.welcome-status.ready .welcome-status-dot {
+  background: #7c9a82;
+}
+
+.welcome-status.error .welcome-status-dot {
+  background: #f87171;
+}
+
 /* ---- App Loading/Error ---- */
 
 .app-skeleton {
