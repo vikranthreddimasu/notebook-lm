@@ -7,6 +7,7 @@ export interface ChatRequest {
   prompt: string;
   history?: ChatMessage[];
   notebook_id?: string | null;
+  notebook_ids?: string[] | null;
   conversation_id?: string | null;
 }
 

@@ -75,6 +75,7 @@ async def chat_stream_endpoint(request: Request, payload: ChatRequest) -> Stream
                 prompt=payload.prompt,
                 history=history,
                 notebook_id=payload.notebook_id,
+                notebook_ids=payload.notebook_ids,
             ):
                 if event.get("type") == "meta":
                     sources_data = event.get("sources")

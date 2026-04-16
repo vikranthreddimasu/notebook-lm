@@ -19,6 +19,9 @@ interface AppState {
   conversations: Conversation[];
   activeConversationId: string | null;
 
+  // Cross-notebook
+  crossNotebookMode: boolean;
+
   // Documents
   documents: DocumentInfo[];
 
@@ -45,6 +48,9 @@ interface AppState {
   setConversations: (convs: Conversation[]) => void;
   setActiveConversationId: (id: string | null) => void;
 
+  // Actions — cross-notebook
+  setCrossNotebookMode: (val: boolean) => void;
+
   // Actions — documents
   setDocuments: (docs: DocumentInfo[]) => void;
 
@@ -64,6 +70,7 @@ export const useAppStore = create<AppState>((set) => ({
   isStreaming: false,
   conversations: [],
   activeConversationId: null,
+  crossNotebookMode: false,
   documents: [],
   sourcePanelOpen: true,
   activeSources: [],
@@ -94,6 +101,9 @@ export const useAppStore = create<AppState>((set) => ({
   // Conversations
   setConversations: (convs) => set({ conversations: convs }),
   setActiveConversationId: (id) => set({ activeConversationId: id }),
+
+  // Cross-notebook
+  setCrossNotebookMode: (val) => set({ crossNotebookMode: val }),
 
   // Documents
   setDocuments: (docs) => set({ documents: docs }),
