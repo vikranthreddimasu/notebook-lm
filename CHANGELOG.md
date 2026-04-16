@@ -2,6 +2,12 @@
 
 All notable changes to Notebook LM will be documented in this file.
 
+## [0.3.1.0] - 2026-04-15
+
+### Added
+- Click any source in the panel to open the original PDF with the matching passage highlighted in yellow. The viewer auto-navigates to the correct page.
+- Export BibTeX from the overflow menu: generates .bib entries from conversation sources with auto-extracted author, year, and title. Ready for LaTeX.
+
 ## [0.3.0.0] - 2026-04-15
 
 ### Added
