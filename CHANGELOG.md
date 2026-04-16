@@ -2,6 +2,18 @@
 
 All notable changes to Notebook LM will be documented in this file.
 
+## [0.1.1.0] - 2026-04-15
+
+### Added
+- Command palette (Cmd+K) for searching notebooks, documents, and actions. Arrow keys + Enter for keyboard navigation.
+- Keyboard shortcuts help overlay (press ? to see all shortcuts).
+- Welcome screen now shows file format hints, "100% offline" badge, Cmd+K tip, and Ollama connection status.
+
+### Changed
+- Keyboard shortcuts moved from ChatView to a global handler in AppShell. New shortcuts: Cmd+K (palette), ? (help).
+- Toasts now dismiss on click and cap at 3 visible at once.
+- Notebook colors use the Lazy Scholar palette (warm muted tones) instead of the previous rainbow.
+
 ## [0.1.0.0] - 2026-04-15
 
 ### Added
