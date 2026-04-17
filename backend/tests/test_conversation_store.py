@@ -143,9 +143,9 @@ def test_messages_ordered_by_created_at(store):
 
 def test_conversations_ordered_by_updated_at(store):
     c1 = store.create_conversation(notebook_id="nb1", title="Older")
-    c2 = store.create_conversation(notebook_id="nb1", title="Newer")
+    store.create_conversation(notebook_id="nb1", title="Newer")
 
-    # c2 was created after c1, so it should appear first (DESC order)
+    # The newer conversation was created after c1, so it should appear first (DESC order)
     convs = store.list_conversations("nb1")
     assert convs[0].title == "Newer"
     assert convs[1].title == "Older"

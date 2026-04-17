@@ -21,6 +21,8 @@ export interface StreamSource {
   source_path: string;
   preview: string;
   distance?: number | null;
+  relevance_score?: number;
+  notebook_id?: string;
 }
 
 export type ChatStreamEvent =
@@ -94,6 +96,7 @@ export interface SourceChunk {
   distance?: number | null;
   document_name: string;
   relevance_score?: number;
+  notebook_id?: string;
 }
 
 export interface CreateNotebookRequest {

@@ -46,7 +46,6 @@ async def chat_stream_endpoint(request: Request, payload: ChatRequest) -> Stream
         accumulated_reply = ""
         sources_data: list[dict] | None = None
         conversation_id = payload.conversation_id
-        persist_warning = False
 
         try:
             # Create conversation on first message if no conversation_id provided

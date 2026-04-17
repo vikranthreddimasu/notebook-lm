@@ -14,7 +14,10 @@ class ChatRequest(BaseModel):
     prompt: str
     history: List[ChatMessage] | None = None
     notebook_id: str | None = Field(None, description="Optional notebook ID for RAG-enabled chat")
-    notebook_ids: List[str] | None = Field(None, description="Optional list of notebook IDs for cross-notebook synthesis")
+    notebook_ids: List[str] | None = Field(
+        None,
+        description="Optional list of notebook IDs for cross-notebook synthesis",
+    )
     conversation_id: str | None = Field(None, description="Optional conversation ID for persistence")
 
 
