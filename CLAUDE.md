@@ -21,3 +21,17 @@ Key routing rules:
 - Architecture review → invoke plan-eng-review
 - Save progress, checkpoint, resume → invoke checkpoint
 - Code quality, health check → invoke health
+
+## Design System
+
+Always read DESIGN.md before making any visual or UI decisions. All font choices,
+colors, spacing, radius, motion, and aesthetic direction are defined there. The
+design system is called "Lazy Scholar, Refined" and uses a dual-accent color
+language: sage (your action) + amber (citation / grounding) + slate (uncertainty).
+
+The source-of-truth tokens file in code is
+`apps/desktop/src/design-system/tokens.css` — keep it in sync with DESIGN.md.
+
+Do not deviate without explicit user approval. In QA mode, flag any code that
+doesn't match DESIGN.md (wrong radius, off-palette colors, ad-hoc typography,
+unapproved fonts like Inter/Roboto/Arial).
