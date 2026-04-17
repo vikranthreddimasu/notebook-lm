@@ -14,7 +14,7 @@
   max-width: 90vw;
   background: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-modal);
   box-shadow: var(--shadow-lg);
   overflow: hidden;
 }

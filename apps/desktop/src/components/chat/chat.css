@@ -106,20 +106,24 @@
   flex-direction: column;
   justify-content: center;
   color: var(--color-text-muted);
-  gap: var(--space-2);
-  padding: var(--space-12) var(--space-8);
+  gap: var(--space-3);
+  padding: var(--space-16) var(--space-8);
 }
 
 .chat-empty p:first-child {
-  font-size: var(--text-xl);
-  font-weight: 500;
-  color: var(--color-text-secondary);
-  letter-spacing: -0.02em;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: var(--text-display-sm);
+  font-weight: 400;
+  color: var(--color-text-primary);
+  letter-spacing: -0.015em;
+  line-height: 1.1;
+  margin: 0;
 }
 
 .chat-empty-hint {
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
 }
 
 /* ---- Input area ---- */

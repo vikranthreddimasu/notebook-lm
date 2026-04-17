@@ -12,7 +12,7 @@
 
 .toast {
   padding: 12px 24px;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-card);
   font-size: var(--text-sm);
   font-weight: 450;
   color: var(--color-text-primary);

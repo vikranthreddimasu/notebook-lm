@@ -14,7 +14,7 @@
   padding: var(--space-6);
   background: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-modal);
   box-shadow: var(--shadow-lg);
 }
 
@@ -39,12 +39,13 @@
 }
 
 .shortcuts-keys {
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-family: var(--font-mono);
   font-size: 12px;
+  font-variant-numeric: tabular-nums;
   padding: 3px 8px;
   background: var(--color-bg-primary);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-xs);
   color: var(--color-text-secondary);
 }
 
