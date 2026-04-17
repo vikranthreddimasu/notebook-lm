@@ -1,14 +1,17 @@
 :root {
   /*
-   * "Lazy Scholar" — warm stone blacks with sage accent.
-   * Calm, generous, readable. The tool disappears, the content is everything.
+   * Lazy Scholar, Refined — warm-dark reading room.
+   * Dual-accent: sage (your action) + amber (citation / grounding) + slate (uncertainty).
+   * Source of truth: DESIGN.md. Keep this file in sync.
    */
 
-  /* Backgrounds — warm stone tones, not cold gray */
-  --color-bg-primary: #0c0a09;
-  --color-bg-secondary: #161412;
-  --color-bg-surface: #1c1917;
-  --color-bg-elevated: #262220;
+  /* ===== Color ===== */
+
+  /* Backgrounds — warm stone, not cold gray */
+  --color-bg-primary: #0c0a09;     /* warm ink */
+  --color-bg-secondary: #161412;   /* sidebar, source panel */
+  --color-bg-surface: #1c1917;     /* cards */
+  --color-bg-elevated: #262220;    /* hovered cards, modals */
   --color-bg-hover: rgba(245, 240, 234, 0.04);
   --color-bg-active: rgba(245, 240, 234, 0.07);
 
@@ -18,40 +21,54 @@
   --color-border-hover: rgba(245, 240, 234, 0.14);
 
   /* Text — warm off-whites, never pure white */
-  --color-text-primary: #f5f0ea;
+  --color-text-primary: #f5f0ea;   /* aged vellum */
   --color-text-secondary: #a8a29e;
   --color-text-muted: #57534e;
 
-  /* Accent — cool sage */
+  /* Primary — your action (sage) */
   --color-accent: #7c9a82;
   --color-accent-hover: #6a8a70;
   --color-accent-subtle: rgba(124, 154, 130, 0.10);
   --color-accent-glow: rgba(124, 154, 130, 0.15);
 
-  /* Status */
+  /* Citation — grounding (warm amber) */
+  --color-cite: #d9925a;
+  --color-cite-hover: #c67f49;
+  --color-cite-subtle: rgba(217, 146, 90, 0.10);
+  --color-cite-glow: rgba(217, 146, 90, 0.22);
+
+  /* Uncertainty — low-confidence (dusty slate) */
+  --color-uncertain: #6b7a8f;
+  --color-uncertain-subtle: rgba(107, 122, 143, 0.10);
+
+  /* Semantic */
   --color-success: #4ade80;
   --color-error: #fb7185;
   --color-warning: #fbbf24;
 
-  /* Shadows — warm black base */
+  /* ===== Shadows — warm black base ===== */
   --shadow-sm: 0 1px 2px rgba(10, 8, 6, 0.5);
   --shadow-md: 0 4px 16px rgba(10, 8, 6, 0.45);
   --shadow-lg: 0 12px 40px rgba(10, 8, 6, 0.55);
   --shadow-inset: inset 0 1px 0 rgba(245, 240, 234, 0.03);
-  --shadow-glow: 0 0 24px rgba(124, 154, 130, 0.12);
+  --shadow-glow: 0 0 24px rgba(124, 154, 130, 0.12);       /* sage — primary action */
+  --shadow-cite-glow: 0 0 24px rgba(217, 146, 90, 0.14);   /* amber — citation hover only */
 
-  /* Radius — Soft Pill system */
-  --radius-xs: 6px;
-  --radius-sm: 999px;
-  --radius-md: 999px;
-  --radius-lg: 999px;
-  --radius-xl: 20px;
-  --radius-card: 14px;
-  --radius-input: 999px;
-  --radius-textarea: 20px;
-  --radius-modal: 20px;
+  /* ===== Radius — hierarchical. Pill for action + identity; step-down for containers. ===== */
+  --radius-xs: 6px;          /* context menu items, tiny chips */
+  --radius-input: 10px;      /* text inputs, search fields */
+  --radius-card: 14px;       /* source cards, message bubbles */
+  --radius-textarea: 16px;   /* composer, multi-line inputs */
+  --radius-modal: 20px;      /* modals, command palette, preview dialogs */
+  --radius-pill: 999px;      /* buttons, tags, status pills, sidebar items */
 
-  /* Spacing (4px base) */
+  /* Legacy aliases — old tokens mapped to the new hierarchy. Migrate callsites over time. */
+  --radius-sm: var(--radius-pill);    /* was blanket 999px; buttons & chips are pill */
+  --radius-md: var(--radius-pill);
+  --radius-lg: var(--radius-modal);   /* was 999px; overlays/panels are modal */
+  --radius-xl: var(--radius-modal);
+
+  /* ===== Spacing (4px base) ===== */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -61,25 +78,38 @@
   --space-8: 32px;
   --space-10: 40px;
   --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
 
-  /* Typography — system San Francisco on macOS */
+  /* ===== Typography ===== */
+  --font-serif: 'Instrument Serif', ui-serif, Georgia, serif;
   --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-  --font-mono: 'SF Mono', 'JetBrains Mono', 'Fira Code', monospace;
-  --text-xs: 12px;
-  --text-sm: 14px;
-  --text-base: 16px;
-  --text-lg: 18px;
-  --text-xl: 24px;
-  --text-2xl: 32px;
+  --font-mono: 'Geist Mono', 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
 
-  /* Transitions */
-  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
-  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
-  --duration-fast: 120ms;
-  --duration-normal: 200ms;
-  --duration-slow: 350ms;
+  /* Body / UI scale */
+  --text-xs: 11px;            /* metadata, micro-caps, timestamps */
+  --text-sm: 13px;            /* UI labels, chips, source card names */
+  --text-base: 15px;          /* body, chat messages */
+  --text-md: 16px;            /* welcome subtitle, prominent body */
+  --text-lg: 18px;            /* section titles in dense UI */
+  --text-xl: 22px;            /* card titles */
+  --text-2xl: 28px;           /* reserved */
 
-  /* Layout */
+  /* Display scale — serif, italic by convention */
+  --text-display-sm: 36px;    /* document titles, section headers */
+  --text-display-md: 48px;    /* empty states */
+  --text-display-lg: 64px;    /* hero */
+  --text-display-xl: 80px;    /* welcome marquee */
+
+  /* ===== Motion ===== */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);     /* enter, hover */
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);    /* move */
+  --duration-fast: 120ms;                          /* hover, focus */
+  --duration-normal: 200ms;                        /* state change, card lift */
+  --duration-slow: 350ms;                          /* entrance, relevance bar fill */
+
+  /* ===== Layout ===== */
   --sidebar-width: 240px;
   --source-panel-width: 280px;
   --titlebar-height: 52px;
@@ -122,4 +152,56 @@
 
 *::-webkit-scrollbar-thumb:hover {
   background-color: rgba(168, 162, 158, 0.22);
+}
+
+/* ===== Citation pattern — the signature treatment =====
+   When the assistant returns a grounded sentence, wrap it in <span class="cited">…<span class="cite-marker">[1]</span></span>.
+   Left amber rule = "this came from a source". Hover = subtle amber halo.
+   Non-cited prose uses normal paragraph styling — the visual split is instant and typographic.
+*/
+
+.cited {
+  display: block;
+  padding: 4px 0 4px 16px;
+  border-left: 2px solid var(--color-cite);
+  margin: var(--space-2) 0;
+  border-radius: 0 var(--radius-xs) var(--radius-xs) 0;
+  transition: background var(--duration-normal) var(--ease-out),
+              box-shadow var(--duration-normal) var(--ease-out);
+}
+
+.cited:hover {
+  background: var(--color-cite-subtle);
+  box-shadow: var(--shadow-cite-glow);
+}
+
+.cite-marker {
+  color: var(--color-cite);
+  font-family: var(--font-mono);
+  font-size: 0.7em;
+  font-variant-numeric: tabular-nums;
+  vertical-align: super;
+  margin-left: 4px;
+  letter-spacing: 0.04em;
+}
+
+/* Uncertainty banner — when retrieval confidence is low */
+.uncertain {
+  color: var(--color-uncertain);
+  background: var(--color-uncertain-subtle);
+  border-left: 2px solid var(--color-uncertain);
+  padding: var(--space-2) var(--space-4);
+  border-radius: 0 var(--radius-xs) var(--radius-xs) 0;
+}
+
+/* ===== Reduced motion ===== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
