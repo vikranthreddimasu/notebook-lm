@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useAppStore } from '../../store/app-store';
 import { useNotebooks } from '../../hooks/useNotebooks';
 import { showToast } from './Toast';
 import './zotero-import.css';

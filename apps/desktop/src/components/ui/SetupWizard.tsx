@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { fetchConfig, uploadDocument } from '../../api';
+import { uploadDocument } from '../../api';
 import { useAppStore } from '../../store/app-store';
 import { useNotebooks } from '../../hooks/useNotebooks';
 import { showToast } from './Toast';
@@ -34,7 +34,6 @@ export function SetupWizard({ onComplete }: { onComplete: () => void }) {
   const [ollamaStatus, setOllamaStatus] = useState<OllamaStatus>({ state: 'checking' });
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [uploadedFilename, setUploadedFilename] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { refresh: refreshNotebooks } = useNotebooks();
 
@@ -95,7 +94,6 @@ export function SetupWizard({ onComplete }: { onComplete: () => void }) {
       const result = await uploadDocument(file);
       useAppStore.getState().setActiveNotebookId(result.notebook_id);
       await refreshNotebooks();
-      setUploadedFilename(file.name);
       showToast(`${file.name} indexed successfully`, 'success');
 
       // Mark wizard complete and hand off

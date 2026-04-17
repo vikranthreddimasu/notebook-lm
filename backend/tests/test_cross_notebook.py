@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 from notebooklm_backend.config import AppConfig
-from notebooklm_backend.services.vector_store import VectorStoreManager, create_vector_store
+from notebooklm_backend.services.vector_store import create_vector_store
 from notebooklm_backend.services.chunking import TextChunk
 
 

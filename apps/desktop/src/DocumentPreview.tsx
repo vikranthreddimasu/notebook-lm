@@ -58,7 +58,7 @@ function DocumentPreview({ isOpen, onClose, documentUrl, filename, highlightText
           const page = await pdf.getPage(i);
           const textContent = await page.getTextContent();
           const pageText = normalizeText(
-            textContent.items.map((item: { str?: string }) => item.str || '').join(' ')
+            textContent.items.map((item) => ('str' in item ? item.str : '')).join(' ')
           );
           if (pageText.includes(searchSnippet)) {
             setPageNumber(i);

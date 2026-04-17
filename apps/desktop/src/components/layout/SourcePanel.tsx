@@ -27,7 +27,7 @@ export function SourcePanel({ onSourceClick }: SourcePanelProps) {
 
       <div className="source-panel-list">
         {activeSources.map((source, i) => {
-          const nbId = (source as Record<string, unknown>).notebook_id as string | undefined;
+          const nbId = source.notebook_id;
           const nbName = nbId ? notebooks.find((nb) => nb.notebook_id === nbId)?.title : null;
 
           return (
