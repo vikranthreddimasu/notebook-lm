@@ -217,13 +217,17 @@
   border-radius: 0 var(--radius-xs) var(--radius-xs) 0;
 }
 
-/* ===== Reduced motion ===== */
+/* ===== Reduced motion =====
+   Stop animations entirely rather than playing them at 0.01ms — the prior
+   rule caused shimmer/pulse keyframes to flicker at near-seizure speed
+   instead of ceasing. Transitions collapse to an imperceptible fade so
+   state changes still register without visible motion.
+*/
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
+    animation: none !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }

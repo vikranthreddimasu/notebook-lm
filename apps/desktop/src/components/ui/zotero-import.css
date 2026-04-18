@@ -148,7 +148,7 @@
 .zotero-btn-primary {
   padding: 10px 24px;
   background: var(--color-accent);
-  color: #fff;
+  color: #0c0a09;
 }
 
 .zotero-btn-primary:hover:not(:disabled) {
