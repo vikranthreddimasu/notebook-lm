@@ -38,6 +38,34 @@ class VectorStoreManager:
                 # Collection may not exist yet for never-ingested notebooks.
                 pass
 
+    def delete_document(self, notebook_id: str, source_path: str) -> int:
+        """Remove all chunks and the summary for a single document. Returns
+        the number of chunks removed (0 if the document wasn't indexed)."""
+        removed = 0
+        try:
+            collection = self.get_collection(notebook_id)
+            existing = collection.get(where={"source_path": source_path})
+            ids = existing.get("ids") or []
+            if ids:
+                collection.delete(ids=ids)
+                removed = len(ids)
+        except Exception:
+            pass
+
+        # Summaries live in a sibling collection; also best-effort.
+        try:
+            summaries_collection = self.client.get_collection(
+                name=self._doc_summaries_collection_name(notebook_id)
+            )
+            existing = summaries_collection.get(where={"source_path": source_path})
+            ids = existing.get("ids") or []
+            if ids:
+                summaries_collection.delete(ids=ids)
+        except Exception:
+            pass
+
+        return removed
+
     def add_chunks(self, notebook_id: str, chunks: Iterable[TextChunk]) -> int:
         chunk_list = list(chunks)
         if not chunk_list:

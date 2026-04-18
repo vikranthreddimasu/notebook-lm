@@ -228,6 +228,43 @@ class NotebookStore:
             conn.execute("DELETE FROM ingestion_jobs WHERE notebook_id = ?", (notebook_id,))
             conn.execute("DELETE FROM notebooks WHERE notebook_id = ?", (notebook_id,))
 
+    def adjust_counts(
+        self, notebook_id: str, source_delta: int, chunk_delta: int
+    ) -> NotebookMetadata | None:
+        """Apply deltas to source_count and chunk_count, clamped at zero.
+
+        Used by the document delete path — removing a document reduces the
+        notebook's count without full reingestion. Clamps to 0 defensively
+        so a data inconsistency can't produce negative counts."""
+        now = datetime.now(timezone.utc)
+        with self._connect() as conn:
+            cursor = conn.execute(
+                """
+                UPDATE notebooks
+                SET source_count = MAX(0, source_count + ?),
+                    chunk_count = MAX(0, chunk_count + ?),
+                    updated_at = ?
+                WHERE notebook_id = ?
+                """,
+                (source_delta, chunk_delta, now.isoformat(), notebook_id),
+            )
+            if cursor.rowcount == 0:
+                return None
+        return self.get_notebook(notebook_id)
+
+    def rename_notebook(self, notebook_id: str, title: str) -> NotebookMetadata | None:
+        """Update the title and bump updated_at. Returns the updated row, or
+        None if the notebook doesn't exist."""
+        now = datetime.now(timezone.utc)
+        with self._connect() as conn:
+            cursor = conn.execute(
+                "UPDATE notebooks SET title = ?, updated_at = ? WHERE notebook_id = ?",
+                (title, now.isoformat(), notebook_id),
+            )
+            if cursor.rowcount == 0:
+                return None
+        return self.get_notebook(notebook_id)
+
     def list_jobs(self) -> list[IngestionJobStatus]:
         with self._connect() as conn:
             rows = conn.execute(

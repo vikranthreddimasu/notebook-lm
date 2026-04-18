@@ -24,3 +24,9 @@
   background: rgba(74, 222, 128, 0.15);
   border-color: rgba(74, 222, 128, 0.3);
 }
+
+.connection-banner-warn {
+  background: rgba(217, 146, 90, 0.14);
+  border-color: rgba(217, 146, 90, 0.32);
+  color: var(--color-text-primary);
+}
