@@ -75,7 +75,10 @@ def create_app() -> FastAPI:
     app.state.speech_service = SpeechService(settings)
     app.state.agent_service = agent_service
 
-    # Allow renderer (http://localhost:5173) to call the API in dev; loosened in v1 for simplicity.
+    # Explicit localhost dev origins + Electron's file:// origin ("null").
+    # We used to allow_origin_regex=".*" with credentials — a localhost CSRF
+    # footgun (any browser tab on the machine could hit the API). Credentials
+    # aren't used, so leave them off.
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[
@@ -83,8 +86,7 @@ def create_app() -> FastAPI:
             "http://127.0.0.1:5173",
             "null",  # Electron file:// origin
         ],
-        allow_origin_regex=".*",
-        allow_credentials=True,
+        allow_credentials=False,
         allow_methods=["*"],
         allow_headers=["*"],
     )

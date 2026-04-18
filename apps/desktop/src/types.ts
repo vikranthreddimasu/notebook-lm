@@ -1,11 +1,24 @@
 export interface ChatMessage {
+  /** Stable client-side id. Assigned at add-time so streaming updates and
+   *  aborts survive re-renders, notebook switches, and history edits. */
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  /** True while the assistant reply is still streaming. */
+  streaming?: boolean;
+  /** True if the user aborted this assistant reply. */
+  aborted?: boolean;
+}
+
+/** Wire shape the backend expects — no client-side id field. */
+export interface ChatHistoryItem {
   role: 'user' | 'assistant';
   content: string;
 }
 
 export interface ChatRequest {
   prompt: string;
-  history?: ChatMessage[];
+  history?: ChatHistoryItem[];
   notebook_id?: string | null;
   notebook_ids?: string[] | null;
   conversation_id?: string | null;

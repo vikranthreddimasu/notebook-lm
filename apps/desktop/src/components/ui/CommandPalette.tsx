@@ -20,14 +20,14 @@ function matchScore(query: string, label: string): number {
 
 export function CommandPalette({ open, onClose, onZoteroImport }: { open: boolean; onClose: () => void; onZoteroImport?: () => void }) {
   const [query, setQuery] = useState('');
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const notebooks = useAppStore((s) => s.notebooks);
   const documents = useAppStore((s) => s.documents);
   const messages = useAppStore((s) => s.messages);
   const setActiveNotebookId = useAppStore((s) => s.setActiveNotebookId);
   const toggleSourcePanel = useAppStore((s) => s.toggleSourcePanel);
-  const clearMessages = useAppStore((s) => s.clearMessages);
-  const setActiveConversationId = useAppStore((s) => s.setActiveConversationId);
+  const newChat = useAppStore((s) => s.newChat);
   const setPreviewDocument = useAppStore((s) => s.setPreviewDocument);
 
   useEffect(() => {
@@ -49,6 +49,10 @@ export function CommandPalette({ open, onClose, onZoteroImport }: { open: boolea
     return () => window.removeEventListener('keydown', handler);
   }, [open, onClose]);
 
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [query]);
+
   if (!open) return null;
 
   const allItems: PaletteItem[] = [
@@ -68,7 +72,7 @@ export function CommandPalette({ open, onClose, onZoteroImport }: { open: boolea
       id: 'action-new-chat',
       label: 'New chat',
       section: 'Actions',
-      onSelect: () => { clearMessages(); setActiveConversationId(null); onClose(); },
+      onSelect: () => { newChat(); onClose(); },
     },
     {
       id: 'action-toggle-sources',
@@ -111,12 +115,7 @@ export function CommandPalette({ open, onClose, onZoteroImport }: { open: boolea
     }
   }
 
-  const [selectedIndex, setSelectedIndex] = useState(0);
   const flatItems = sections.flatMap((s) => s.items);
-
-  useEffect(() => {
-    setSelectedIndex(0);
-  }, [query]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') {

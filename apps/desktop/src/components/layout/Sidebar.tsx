@@ -5,9 +5,14 @@ import { useDocuments } from '../../hooks/useDocuments';
 import { useConversations } from '../../hooks/useConversations';
 import { DocumentCard } from '../documents/DocumentCard';
 import { showToast } from '../ui/Toast';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { deleteNotebook } from '../../api';
 import { timeAgo } from '../../utils/timeAgo';
 import './layout.css';
+
+type PendingConfirm =
+  | { kind: 'delete-notebook'; notebookId: string; title: string }
+  | { kind: 'delete-conversation'; conversationId: string; title: string };
 
 // Lazy Scholar palette: warm, muted tones that match the stone-sage design system
 const NOTEBOOK_COLORS = [
@@ -45,6 +50,7 @@ export function Sidebar() {
   const [showAllConversations, setShowAllConversations] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
+  const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
   const renameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -61,18 +67,45 @@ export function Sidebar() {
     }
   }, [renamingId]);
 
-  const handleDeleteNotebook = async (notebookId: string) => {
-    try {
-      await deleteNotebook(notebookId);
-      showToast('Notebook deleted', 'success');
-      if (activeNotebookId === notebookId) {
-        select(null);
-      }
-      await refreshNotebooks();
-    } catch (err) {
-      showToast('Failed to delete notebook', 'error');
-    }
+  const askDeleteNotebook = (notebookId: string) => {
+    const nb = notebooks.find((n) => n.notebook_id === notebookId);
+    setPendingConfirm({
+      kind: 'delete-notebook',
+      notebookId,
+      title: nb?.title || 'this notebook',
+    });
     setContextMenu(null);
+  };
+
+  const askDeleteConversation = (conversationId: string) => {
+    const conv = conversations.find((c) => c.id === conversationId);
+    setPendingConfirm({
+      kind: 'delete-conversation',
+      conversationId,
+      title: conv?.title || 'this conversation',
+    });
+    setConvMenu(null);
+  };
+
+  const confirmPending = async () => {
+    if (!pendingConfirm) return;
+    const current = pendingConfirm;
+    setPendingConfirm(null);
+
+    if (current.kind === 'delete-notebook') {
+      try {
+        await deleteNotebook(current.notebookId);
+        if (activeNotebookId === current.notebookId) {
+          select(null);
+        }
+        await refreshNotebooks();
+        showToast('Notebook deleted', 'success');
+      } catch {
+        showToast('Failed to delete notebook', 'error');
+      }
+    } else if (current.kind === 'delete-conversation') {
+      await deleteConv(current.conversationId);
+    }
   };
 
   const handleNewClick = () => {
@@ -99,6 +132,7 @@ export function Sidebar() {
       renameConv(conversationId, renameValue.trim());
     }
     setRenamingId(null);
+    setRenameValue('');
   };
 
   const visibleConversations = showAllConversations
@@ -166,7 +200,10 @@ export function Sidebar() {
                     onBlur={() => handleRenameSubmit(conv.id)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') handleRenameSubmit(conv.id);
-                      if (e.key === 'Escape') setRenamingId(null);
+                      if (e.key === 'Escape') {
+                        setRenamingId(null);
+                        setRenameValue('');
+                      }
                     }}
                     onClick={(e) => e.stopPropagation()}
                   />
@@ -260,7 +297,7 @@ export function Sidebar() {
           <button
             type="button"
             className="context-menu-item context-menu-danger"
-            onClick={() => handleDeleteNotebook(contextMenu.notebookId)}
+            onClick={() => askDeleteNotebook(contextMenu.notebookId)}
           >
             Delete notebook
           </button>
@@ -287,15 +324,40 @@ export function Sidebar() {
           <button
             type="button"
             className="context-menu-item context-menu-danger"
-            onClick={() => {
-              deleteConv(convMenu.conversationId);
-              setConvMenu(null);
-            }}
+            onClick={() => askDeleteConversation(convMenu.conversationId)}
           >
             Delete
           </button>
         </div>
       )}
+
+      <ConfirmDialog
+        open={pendingConfirm?.kind === 'delete-notebook'}
+        danger
+        title="Delete notebook?"
+        message={
+          pendingConfirm?.kind === 'delete-notebook'
+            ? `"${pendingConfirm.title}" and all of its documents, embeddings, and conversations will be permanently deleted. This can't be undone.`
+            : ''
+        }
+        confirmLabel="Delete notebook"
+        onConfirm={confirmPending}
+        onCancel={() => setPendingConfirm(null)}
+      />
+
+      <ConfirmDialog
+        open={pendingConfirm?.kind === 'delete-conversation'}
+        danger
+        title="Delete conversation?"
+        message={
+          pendingConfirm?.kind === 'delete-conversation'
+            ? `"${pendingConfirm.title}" and all of its messages will be permanently deleted. This can't be undone.`
+            : ''
+        }
+        confirmLabel="Delete conversation"
+        onConfirm={confirmPending}
+        onCancel={() => setPendingConfirm(null)}
+      />
     </aside>
   );
 }

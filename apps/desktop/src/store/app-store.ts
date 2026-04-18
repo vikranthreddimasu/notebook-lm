@@ -2,6 +2,14 @@
 import { create } from 'zustand';
 import type { BackendConfig, ChatMessage, Conversation, DocumentInfo, Notebook, SourceChunk } from '../types';
 
+function makeId(): string {
+  // crypto.randomUUID is available in Electron's renderer and modern browsers.
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `msg_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
 interface AppState {
   // Connection
   status: 'checking' | 'ready' | 'error';
@@ -39,9 +47,19 @@ interface AppState {
   setActiveNotebookId: (id: string | null) => void;
 
   // Actions — chat
-  addMessage: (msg: ChatMessage) => void;
-  updateMessageAt: (index: number, content: string) => void;
-  clearMessages: () => void;
+  /** Add a message. If `msg.id` is omitted, a stable id is generated. Returns the id. */
+  addMessage: (msg: Omit<ChatMessage, 'id'> & { id?: string }) => string;
+  /** Replace the content of a message by id. Marks streaming=false when done. */
+  updateMessage: (id: string, patch: Partial<Omit<ChatMessage, 'id'>>) => void;
+  /** Remove a message by id (used when the user aborts an empty assistant turn). */
+  removeMessage: (id: string) => void;
+  /** Bulk replace messages — used when loading a historical conversation. */
+  setMessages: (messages: ChatMessage[]) => void;
+  /** Clear on-screen chat AND forget the active conversation (user-initiated "new chat"). */
+  newChat: () => void;
+  /** Clear on-screen chat only — used internally when loading a different conversation.
+   *  Does NOT touch activeConversationId so callers can restore state on fetch failure. */
+  resetMessagesOnly: () => void;
   setIsStreaming: (val: boolean) => void;
 
   // Actions — conversations
@@ -57,6 +75,7 @@ interface AppState {
   // Actions — sources & UI
   setActiveSources: (sources: SourceChunk[]) => void;
   toggleSourcePanel: () => void;
+  setSourcePanelOpen: (open: boolean) => void;
   setPreviewDocument: (doc: DocumentInfo | null) => void;
 }
 
@@ -80,22 +99,34 @@ export const useAppStore = create<AppState>((set) => ({
   setStatus: (status) => set({ status }),
   setConfig: (config) => set({ config }),
 
-  // Notebooks — switching clears chat and documents
+  // Notebooks — switching resets notebook-scoped state. Conversation and
+  // in-flight stream should be canceled by the caller BEFORE this is invoked.
   setNotebooks: (notebooks) => set({ notebooks }),
   setActiveNotebookId: (id) =>
-    set({ activeNotebookId: id, messages: [], activeSources: [], documents: [], activeConversationId: null }),
+    set({
+      activeNotebookId: id,
+      messages: [],
+      activeSources: [],
+      documents: [],
+      activeConversationId: null,
+    }),
 
   // Chat
-  addMessage: (msg) => set((state) => ({ messages: [...state.messages, msg] })),
-  updateMessageAt: (index, content) =>
-    set((state) => {
-      const messages = [...state.messages];
-      if (messages[index]) {
-        messages[index] = { ...messages[index], content };
-      }
-      return { messages };
-    }),
-  clearMessages: () => set({ messages: [], activeSources: [] }),
+  addMessage: (msg) => {
+    const id = msg.id ?? makeId();
+    set((state) => ({ messages: [...state.messages, { ...msg, id }] }));
+    return id;
+  },
+  updateMessage: (id, patch) =>
+    set((state) => ({
+      messages: state.messages.map((m) => (m.id === id ? { ...m, ...patch } : m)),
+    })),
+  removeMessage: (id) =>
+    set((state) => ({ messages: state.messages.filter((m) => m.id !== id) })),
+  setMessages: (messages) => set({ messages }),
+  newChat: () =>
+    set({ messages: [], activeSources: [], activeConversationId: null, isStreaming: false }),
+  resetMessagesOnly: () => set({ messages: [], activeSources: [] }),
   setIsStreaming: (val) => set({ isStreaming: val }),
 
   // Conversations
@@ -111,5 +142,6 @@ export const useAppStore = create<AppState>((set) => ({
   // Sources & UI
   setActiveSources: (sources) => set({ activeSources: sources }),
   toggleSourcePanel: () => set((state) => ({ sourcePanelOpen: !state.sourcePanelOpen })),
+  setSourcePanelOpen: (open) => set({ sourcePanelOpen: open }),
   setPreviewDocument: (doc) => set({ previewDocument: doc }),
 }));

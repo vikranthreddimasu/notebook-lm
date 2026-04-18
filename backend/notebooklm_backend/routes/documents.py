@@ -163,71 +163,55 @@ async def preview_document(
     from urllib.parse import unquote
     
     settings: AppConfig = request.app.state.settings
-    
+
     # Decode URL-encoded path
     decoded_path = unquote(source_path)
-    file_path = Path(decoded_path)
-    filename = file_path.name
-    
-    # Security: ensure the file is within the uploads directory
-    uploads_dir = settings.data_dir / "uploads" / notebook_id
-    uploads_base = settings.data_dir / "uploads"
-    
+    incoming_path = Path(decoded_path)
+    filename = incoming_path.name
+
+    # The notebook-scoped uploads directory is the only path we'll serve from.
+    # Previous versions had a cross-notebook fallback that let any notebook
+    # serve any filename — a disclosure bug we're deliberately closing here.
+    uploads_dir = (settings.data_dir / "uploads" / notebook_id).resolve()
+
     import logging
-    
+
     try:
-        # Strategy: Try multiple locations in order of preference
-        # 1. New format: uploads/{notebook_id}/filename (most likely)
-        potential_path = uploads_dir / filename
-        if potential_path.exists():
-            file_path = potential_path
-            logging.info(f"Found file at: {file_path}")
-        # 2. Absolute path from metadata (if it exists and is within uploads)
-        elif file_path.is_absolute() and file_path.exists():
-            resolved_path = file_path.resolve()
-            resolved_uploads_base = uploads_base.resolve()
-            
-            if not str(resolved_path).startswith(str(resolved_uploads_base)):
+        # Resolve the candidate path within the notebook's scoped directory.
+        # Strategy 1: standard new format — uploads/{notebook_id}/filename.
+        candidate = (uploads_dir / filename).resolve()
+
+        # Strategy 2: an absolute path from older metadata — accept only if
+        # it resolves *inside* this notebook's uploads_dir.
+        if not candidate.exists() and incoming_path.is_absolute():
+            abs_candidate = incoming_path.resolve()
+            try:
+                abs_candidate.relative_to(uploads_dir)
+                candidate = abs_candidate
+            except ValueError:
+                # Absolute path escapes this notebook's directory — refuse.
                 raise HTTPException(status_code=403, detail="Access denied")
-            
-            file_path = resolved_path
-            logging.info(f"Found file at absolute path: {file_path}")
-        # 3. Old format: uploads/filename (for backward compatibility)
-        elif (uploads_base / filename).exists():
-            file_path = uploads_base / filename
-            logging.info(f"Found file at old location: {file_path}")
-        # 4. Search in all notebook subdirectories
-        else:
-            found = False
-            if uploads_base.exists():
-                for subdir in uploads_base.iterdir():
-                    if subdir.is_dir():
-                        candidate = subdir / filename
-                        if candidate.exists():
-                            file_path = candidate
-                            found = True
-                            logging.info(f"Found file in subdirectory: {file_path}")
-                            break
-            
-            if not found:
-                # Log all possible locations for debugging
-                logging.error(f"File not found: {filename}")
-                logging.error(f"Searched in: {uploads_dir}")
-                logging.error(f"Searched in: {uploads_base}")
-                if uploads_base.exists():
-                    logging.error(f"Subdirectories: {list(uploads_base.iterdir())}")
-                raise HTTPException(
-                    status_code=404,
-                    detail=f"File not found: {filename}. Notebook ID: {notebook_id}",
-                )
-        
-        if not file_path.exists():
-            raise HTTPException(status_code=404, detail=f"File not found: {file_path}")
-        
+
+        # Final guard: candidate must exist AND sit inside uploads_dir
+        # (protects against `..` traversal in the filename).
+        if not candidate.exists():
+            logging.warning("preview 404: notebook=%s filename=%s", notebook_id, filename)
+            raise HTTPException(
+                status_code=404,
+                detail=f"File not found in notebook: {filename}",
+            )
+        try:
+            candidate.relative_to(uploads_dir)
+        except ValueError:
+            raise HTTPException(status_code=403, detail="Access denied")
+
         return FileResponse(
-            path=str(file_path),
-            filename=file_path.name,
+            path=str(candidate),
+            filename=candidate.name,
             media_type="application/octet-stream",
+            headers={
+                "Content-Disposition": f'attachment; filename="{candidate.name}"',
+            },
         )
     except HTTPException:
         raise

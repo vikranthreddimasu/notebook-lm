@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+import shutil
 import uuid
 from datetime import datetime, timezone
 
@@ -7,6 +9,8 @@ from fastapi import APIRouter, Request
 
 from ..models.notebook import CreateNotebookRequest, IngestionJobStatus, NotebookMetadata
 from ..services.notebook_store import NotebookStore
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/notebooks", tags=["notebooks"])
 
@@ -36,11 +40,32 @@ async def create_notebook(request: Request, body: CreateNotebookRequest) -> Note
 @router.delete("/{notebook_id}")
 async def delete_notebook(request: Request, notebook_id: str) -> dict[str, str]:
     store: NotebookStore = request.app.state.notebook_store
-    # Cascade: delete conversations for this notebook first
+    settings = request.app.state.settings
+    vector_store = request.app.state.vector_store
+
+    # 1) Cascade: delete conversations for this notebook (messages go with them).
     from ..services.conversation_store import ConversationStore
     conv_store: ConversationStore = request.app.state.conversation_store
     conv_store.delete_conversations_for_notebook(notebook_id)
+
+    # 2) Drop the Chroma collection(s) for this notebook so vectors don't
+    #    leak into future queries and disk isn't held forever.
+    try:
+        vector_store.delete_notebook_collections(notebook_id)
+    except Exception:
+        logger.exception("Failed to delete Chroma collections for notebook %s", notebook_id)
+
+    # 3) Remove the uploads directory for this notebook.
+    uploads_dir = settings.data_dir / "uploads" / notebook_id
+    if uploads_dir.exists():
+        try:
+            shutil.rmtree(uploads_dir)
+        except Exception:
+            logger.exception("Failed to remove uploads dir %s", uploads_dir)
+
+    # 4) Finally remove the SQLite row.
     store.delete_notebook(notebook_id)
+
     return {"status": "deleted", "notebook_id": notebook_id}
 
 

@@ -63,9 +63,7 @@ export function AppShell() {
       // Cmd+N — new chat
       if (e.metaKey && e.key === 'n') {
         e.preventDefault();
-        const s = useAppStore.getState();
-        s.clearMessages();
-        s.setActiveConversationId(null);
+        useAppStore.getState().newChat();
         return;
       }
       // ? — keyboard shortcuts (only when not typing in an input)
