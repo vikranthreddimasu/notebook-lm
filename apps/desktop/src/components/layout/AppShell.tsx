@@ -187,6 +187,35 @@ export function AppShell() {
     e.target.value = '';
   };
 
+  // Single entry point for opening a source — called from both the source
+  // panel card click and citation marker click in MessageBubble. Declared
+  // BEFORE the conditional early returns below so hook order stays stable
+  // across wizard/welcome/main renders (Rules of Hooks).
+  const openSource = useCallback(
+    async (source: SourceChunk) => {
+      const notebookId = source.notebook_id || activeNotebookId;
+      if (!notebookId) return;
+      try {
+        const url = await getDocumentPreviewUrl(notebookId, source.source_path);
+        const filename =
+          source.document_name ||
+          source.source_path.split(/[/\\]/).pop() ||
+          source.source_path;
+        setResolvedPreviewUrl(url);
+        setHighlightText(source.preview);
+        setPreviewDocument({
+          filename,
+          source_path: source.source_path,
+          chunk_count: 0,
+          preview: '',
+        });
+      } catch {
+        showToast('Could not open source', 'error');
+      }
+    },
+    [activeNotebookId, setPreviewDocument],
+  );
+
   // Show wizard overlay
   if (showWizard) {
     return (
@@ -240,26 +269,6 @@ export function AppShell() {
       </>
     );
   }
-
-  // Single entry point for opening a source — called from both the source
-  // panel card click and citation marker click in MessageBubble. Keeps the
-  // fetch/open/highlight dance in one place.
-  const openSource = useCallback(
-    async (source: SourceChunk) => {
-      const notebookId = source.notebook_id || activeNotebookId;
-      if (!notebookId) return;
-      try {
-        const url = await getDocumentPreviewUrl(notebookId, source.source_path);
-        const filename = source.document_name || source.source_path.split(/[/\\]/).pop() || source.source_path;
-        setResolvedPreviewUrl(url);
-        setHighlightText(source.preview);
-        setPreviewDocument({ filename, source_path: source.source_path, chunk_count: 0, preview: '' });
-      } catch {
-        showToast('Could not open source', 'error');
-      }
-    },
-    [activeNotebookId, setPreviewDocument],
-  );
 
   return (
     <>
