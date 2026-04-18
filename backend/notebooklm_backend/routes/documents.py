@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import uuid
 from pathlib import Path
 
@@ -10,6 +11,8 @@ from ..config import AppConfig
 from ..services.ingestion import IngestionService, IngestionResult
 from ..services.notebook_store import NotebookStore
 from ..models.notebook import NotebookIngestionRequest
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -149,6 +152,64 @@ async def list_documents(
         return JSONResponse(content={"documents": documents_list})
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to list documents: {str(e)}")
+
+
+@router.delete("")
+async def delete_document(
+    request: Request,
+    notebook_id: str,
+    source_path: str,
+) -> JSONResponse:
+    """Remove a single document from a notebook — its chunks from the vector
+    store, its summary row, its uploaded file, and decrement the notebook's
+    counts. Notebook itself stays."""
+    from urllib.parse import unquote
+    from ..services.vector_store import VectorStoreManager
+
+    settings: AppConfig = request.app.state.settings
+    vector_store: VectorStoreManager = request.app.state.vector_store
+    notebook_store: NotebookStore = request.app.state.notebook_store
+
+    decoded_path = unquote(source_path)
+
+    # 1) Drop chunks from the notebook's chroma collection.
+    try:
+        chunks_removed = vector_store.delete_document(notebook_id, decoded_path)
+    except Exception:
+        logger.exception("vector_store.delete_document failed")
+        chunks_removed = 0
+
+    # 2) Delete the uploaded file if it sits inside this notebook's scoped
+    #    uploads directory. Scope-check is the same pattern as preview.
+    uploads_dir = (settings.data_dir / "uploads" / notebook_id).resolve()
+    filename = Path(decoded_path).name
+    candidate = (uploads_dir / filename).resolve()
+    if not candidate.exists() and Path(decoded_path).is_absolute():
+        abs_candidate = Path(decoded_path).resolve()
+        try:
+            abs_candidate.relative_to(uploads_dir)
+            candidate = abs_candidate
+        except ValueError:
+            candidate = uploads_dir / filename  # fall through — won't exist
+    if candidate.exists():
+        try:
+            candidate.relative_to(uploads_dir)
+            candidate.unlink()
+        except (ValueError, OSError):
+            logger.warning("could not unlink file for delete: %s", candidate)
+
+    # 3) Decrement notebook counts by what we actually removed.
+    if chunks_removed > 0:
+        notebook_store.adjust_counts(notebook_id, source_delta=-1, chunk_delta=-chunks_removed)
+
+    return JSONResponse(
+        content={
+            "status": "deleted",
+            "notebook_id": notebook_id,
+            "source_path": decoded_path,
+            "chunks_removed": chunks_removed,
+        }
+    )
 
 
 @router.get("/preview")

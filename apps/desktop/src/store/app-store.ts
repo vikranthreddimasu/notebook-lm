@@ -2,6 +2,20 @@
 import { create } from 'zustand';
 import type { BackendConfig, ChatMessage, Conversation, DocumentInfo, Notebook, SourceChunk } from '../types';
 
+export type NotificationLevel = 'info' | 'success' | 'error' | 'warning';
+
+export interface AppNotification {
+  id: string;
+  level: NotificationLevel;
+  title: string;
+  body?: string;
+  timestamp: number;
+  /** True until the user opens the center or dismisses it. */
+  unread: boolean;
+}
+
+const MAX_NOTIFICATIONS = 50;
+
 function makeId(): string {
   // crypto.randomUUID is available in Electron's renderer and modern browsers.
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -37,6 +51,9 @@ interface AppState {
   sourcePanelOpen: boolean;
   activeSources: SourceChunk[];
   previewDocument: DocumentInfo | null;
+
+  // Notifications (persistent log — toasts are ephemeral, these stick around)
+  notifications: AppNotification[];
 
   // Actions — connection
   setStatus: (status: AppState['status']) => void;
@@ -77,6 +94,12 @@ interface AppState {
   toggleSourcePanel: () => void;
   setSourcePanelOpen: (open: boolean) => void;
   setPreviewDocument: (doc: DocumentInfo | null) => void;
+
+  // Actions — notifications
+  addNotification: (n: Omit<AppNotification, 'id' | 'timestamp' | 'unread'>) => void;
+  markAllNotificationsRead: () => void;
+  clearNotifications: () => void;
+  dismissNotification: (id: string) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -94,6 +117,7 @@ export const useAppStore = create<AppState>((set) => ({
   sourcePanelOpen: true,
   activeSources: [],
   previewDocument: null,
+  notifications: [],
 
   // Connection
   setStatus: (status) => set({ status }),
@@ -144,4 +168,20 @@ export const useAppStore = create<AppState>((set) => ({
   toggleSourcePanel: () => set((state) => ({ sourcePanelOpen: !state.sourcePanelOpen })),
   setSourcePanelOpen: (open) => set({ sourcePanelOpen: open }),
   setPreviewDocument: (doc) => set({ previewDocument: doc }),
+
+  // Notifications — newest first, capped so the log doesn't grow unbounded
+  addNotification: (n) =>
+    set((state) => ({
+      notifications: [
+        { ...n, id: makeId(), timestamp: Date.now(), unread: true },
+        ...state.notifications,
+      ].slice(0, MAX_NOTIFICATIONS),
+    })),
+  markAllNotificationsRead: () =>
+    set((state) => ({
+      notifications: state.notifications.map((n) => ({ ...n, unread: false })),
+    })),
+  clearNotifications: () => set({ notifications: [] }),
+  dismissNotification: (id) =>
+    set((state) => ({ notifications: state.notifications.filter((n) => n.id !== id) })),
 }));

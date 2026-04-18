@@ -159,6 +159,26 @@
   flex-shrink: 0;
 }
 
+.sidebar-section-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.sidebar-rename-input {
+  flex: 1;
+  min-width: 0;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-pill);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 450;
+  padding: 4px 12px;
+  outline: none;
+}
+
 .sidebar-add-doc-btn {
   -webkit-app-region: no-drag;
   background: transparent;
@@ -341,6 +361,10 @@
   padding: var(--space-3) var(--space-4);
   border-top: 1px solid var(--color-border);
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
   -webkit-app-region: no-drag;
 }
 

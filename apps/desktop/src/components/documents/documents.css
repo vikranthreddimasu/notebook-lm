@@ -1,11 +1,12 @@
 /* ---- DocumentCard ---- */
 
 .document-card {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   cursor: pointer;
   transition: background var(--duration-fast) var(--ease-out);
 }
@@ -23,15 +24,17 @@
   font-size: 9px;
   font-weight: 700;
   font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary);
   min-width: 30px;
   height: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-xs);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--color-bg-surface);
   border: 1px solid var(--color-border);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
 }
 
 .document-card-info {
@@ -55,6 +58,34 @@
   font-size: var(--text-xs);
   color: var(--color-text-muted);
   font-variant-numeric: tabular-nums;
+}
+
+.document-card-menu-btn {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: var(--radius-pill);
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    background var(--duration-fast) var(--ease-out);
+}
+
+.document-card:hover .document-card-menu-btn,
+.document-card-menu-btn:focus-visible {
+  opacity: 1;
+}
+
+.document-card-menu-btn:hover {
+  color: var(--color-text-primary);
+  background: var(--color-bg-surface);
 }
 
 /* ---- DropZone ---- */

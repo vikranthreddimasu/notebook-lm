@@ -125,6 +125,27 @@ export function deleteNotebook(notebookId: string): Promise<{ status: string }> 
   });
 }
 
+export function renameNotebook(notebookId: string, title: string): Promise<Notebook> {
+  return request<Notebook>(`/notebooks/${encodeURIComponent(notebookId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ title }),
+  });
+}
+
+export function deleteDocument(
+  notebookId: string,
+  sourcePath: string,
+): Promise<{ status: string; chunks_removed: number }> {
+  const params = new URLSearchParams({
+    notebook_id: notebookId,
+    source_path: sourcePath,
+  });
+  return request<{ status: string; chunks_removed: number }>(
+    `/documents?${params.toString()}`,
+    { method: 'DELETE' },
+  );
+}
+
 export async function getDocumentPreviewUrl(notebookId: string, sourcePath: string): Promise<string> {
   const apiBase = await getApiBase();
   const params = new URLSearchParams({

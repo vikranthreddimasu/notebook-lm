@@ -7,7 +7,14 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Request
 
-from ..models.notebook import CreateNotebookRequest, IngestionJobStatus, NotebookMetadata
+from fastapi import HTTPException
+
+from ..models.notebook import (
+    CreateNotebookRequest,
+    IngestionJobStatus,
+    NotebookMetadata,
+    RenameNotebookRequest,
+)
 from ..services.notebook_store import NotebookStore
 
 logger = logging.getLogger(__name__)
@@ -35,6 +42,23 @@ async def create_notebook(request: Request, body: CreateNotebookRequest) -> Note
         updated_at=now,
     )
     return store.upsert_notebook(notebook)
+
+
+@router.patch("/{notebook_id}", response_model=NotebookMetadata)
+async def rename_notebook(
+    request: Request,
+    notebook_id: str,
+    body: RenameNotebookRequest,
+) -> NotebookMetadata:
+    """Rename a notebook. Only `title` is editable today."""
+    store: NotebookStore = request.app.state.notebook_store
+    title = body.title.strip()
+    if not title:
+        raise HTTPException(status_code=422, detail="Title cannot be empty")
+    updated = store.rename_notebook(notebook_id, title)
+    if updated is None:
+        raise HTTPException(status_code=404, detail="Notebook not found")
+    return updated
 
 
 @router.delete("/{notebook_id}")

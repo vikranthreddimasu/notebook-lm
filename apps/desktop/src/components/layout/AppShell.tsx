@@ -15,6 +15,7 @@ import { CommandPalette } from '../ui/CommandPalette';
 import { KeyboardShortcutsOverlay } from '../ui/KeyboardShortcuts';
 import { ZoteroImportDialog } from '../ui/ZoteroImport';
 import type { SourceChunk } from '../../types';
+import { humanizeError } from '../../utils/errorMessages';
 import './layout.css';
 
 function isWizardComplete(): boolean {
@@ -135,19 +136,22 @@ export function AppShell() {
   const activeNotebook = notebooks.find((nb) => nb.notebook_id === activeNotebookId);
 
   const handleGlobalDrop = useCallback(async (files: FileList) => {
-    try {
-      for (const file of Array.from(files)) {
+    for (const file of Array.from(files)) {
+      try {
         showToast(`Processing ${file.name}...`);
         const result = await uploadDocument(file, activeNotebookId || undefined);
         if (!activeNotebookId) {
           useAppStore.getState().setActiveNotebookId(result.notebook_id);
         }
-        showToast(`${file.name} indexed successfully`, 'success');
+        showToast(`${file.name} indexed`, 'success');
+      } catch (err) {
+        // Per-file failure should be specific — the old behavior aborted the
+        // whole batch and reported only a generic "Upload failed" with no
+        // filename.
+        showToast(humanizeError(err, { action: `upload ${file.name}` }), 'error');
       }
-      await refreshNotebooks();
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Upload failed', 'error');
     }
+    await refreshNotebooks();
   }, [activeNotebookId, refreshNotebooks]);
 
   const welcomeFileRef = useRef<HTMLInputElement>(null);
@@ -235,7 +239,7 @@ export function AppShell() {
   return (
     <>
       <div className="app-shell">
-        <Sidebar />
+        <Sidebar onOpenZotero={() => setZoteroOpen(true)} />
         <ChatView
           pendingSuggest={pendingSuggest}
           onSuggestConsumed={() => setPendingSuggest(null)}
