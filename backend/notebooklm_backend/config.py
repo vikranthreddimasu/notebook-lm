@@ -24,8 +24,14 @@ class AppConfig(BaseSettings):
     llm_model_path: Path | None = None  # Used by llama-cpp
     onnx_model_path: Path | None = None
     onnx_execution_provider: Literal["cpu", "cuda", "metal"] = "cpu"
-    llm_context_window: int = 2048
-    llm_max_tokens: int = 2048
+    # llm_context_window: how much prompt the model can hold (llama-cpp n_ctx).
+    # llm_max_tokens:     output length cap (passed as num_predict to Ollama,
+    #                     max_tokens to llama-cpp/ONNX). Previously both were
+    #                     2048 — the same value was used for both, which
+    #                     silently truncated long RAG prompts to a 2048-token
+    #                     CONTEXT and also capped replies at 2048 tokens.
+    llm_context_window: int = 4096
+    llm_max_tokens: int = 1024
 
     # Framework integration toggles
     use_langchain_splitter: bool = True

@@ -25,6 +25,12 @@ class NotebookStore:
     def _connect(self) -> Iterable[sqlite3.Connection]:
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
+        # WAL: concurrent readers don't block on writers. Default DELETE journal
+        # mode caused the sidebar to stall while chat streams were completing.
+        # busy_timeout gives the engine 5s to wait out a contended lock before
+        # raising, matching ConversationStore's behavior.
+        conn.execute("PRAGMA journal_mode = WAL")
+        conn.execute("PRAGMA busy_timeout = 5000")
         conn.execute("PRAGMA foreign_keys = ON")
         try:
             yield conn

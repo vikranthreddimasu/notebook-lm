@@ -83,8 +83,11 @@ async def chat_stream_endpoint(request: Request, payload: ChatRequest) -> Stream
                 elif event.get("type") == "done":
                     accumulated_reply = event.get("reply", accumulated_reply)
 
-                # Inject conversation_id into meta events so frontend knows which conversation
-                if event.get("type") == "meta" and conversation_id:
+                # Inject conversation_id into meta AND done events. If the
+                # meta event is dropped (parse error, network hiccup), the
+                # frontend falls back to done, rather than silently creating
+                # a second conversation on the next send.
+                if event.get("type") in ("meta", "done") and conversation_id:
                     event["conversation_id"] = conversation_id
 
                 yield f"data: {json.dumps(event)}\n\n"

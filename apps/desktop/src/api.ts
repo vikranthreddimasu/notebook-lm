@@ -50,22 +50,55 @@ async function getApiBase(): Promise<string> {
   return resolvedApiBase;
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+/** Default timeout for lookup-style requests. Uploads use their own (longer)
+ *  timeout further down. 30s is generous for local ops but still bounded so a
+ *  hung backend doesn't lock the UI indefinitely. */
+const DEFAULT_REQUEST_TIMEOUT_MS = 30_000;
+
+async function request<T>(path: string, init?: RequestInit & { timeoutMs?: number }): Promise<T> {
   const apiBase = await getApiBase();
-  const response = await fetch(`${apiBase}${path}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...init?.headers,
-    },
-    ...init,
-  });
+  const timeoutMs = init?.timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
 
-  if (!response.ok) {
-    const detail = await response.text();
-    throw new Error(detail || `Request failed with status ${response.status}`);
+  // Compose caller-provided signal with our timeout — if either fires, abort.
+  const timeoutController = new AbortController();
+  const timer = setTimeout(() => timeoutController.abort(), timeoutMs);
+  const composed = composeSignals(init?.signal, timeoutController.signal);
+
+  try {
+    const response = await fetch(`${apiBase}${path}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...init?.headers,
+      },
+      ...init,
+      signal: composed,
+    });
+
+    if (!response.ok) {
+      const detail = await response.text();
+      throw new Error(detail || `Request failed with status ${response.status}`);
+    }
+
+    return (await response.json()) as T;
+  } catch (err) {
+    if (timeoutController.signal.aborted && !(init?.signal?.aborted)) {
+      throw new Error('Request timed out');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
   }
+}
 
-  return response.json() as Promise<T>;
+function composeSignals(a: AbortSignal | null | undefined, b: AbortSignal): AbortSignal {
+  if (!a) return b;
+  const controller = new AbortController();
+  const onAbort = () => controller.abort();
+  if (a.aborted) controller.abort();
+  else a.addEventListener('abort', onAbort, { once: true });
+  if (b.aborted) controller.abort();
+  else b.addEventListener('abort', onAbort, { once: true });
+  return controller.signal;
 }
 
 export function fetchConfig(): Promise<BackendConfig> {
@@ -87,21 +120,36 @@ export async function uploadDocument(file: File, notebookId?: string): Promise<I
   const apiBase = await getApiBase();
   const formData = new FormData();
   formData.append('file', file);
-  if (notebookId) {
-    formData.append('notebook_id', notebookId);
+  if (notebookId) formData.append('notebook_id', notebookId);
+
+  // Uploads include embedding generation and can take minutes on a large
+  // PDF. 5 minutes is a conservative ceiling; anything over this is more
+  // likely a backend hang than a legitimate long job.
+  const UPLOAD_TIMEOUT_MS = 5 * 60_000;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(`${apiBase}/documents/ingest`, {
+      method: 'POST',
+      body: formData,
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      const detail = await response.text();
+      throw new Error(detail || `Upload failed with status ${response.status}`);
+    }
+
+    return (await response.json()) as IngestionResponse;
+  } catch (err) {
+    if (controller.signal.aborted) {
+      throw new Error('Upload timed out after 5 minutes');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
   }
-
-  const response = await fetch(`${apiBase}/documents/ingest`, {
-    method: 'POST',
-    body: formData,
-  });
-
-  if (!response.ok) {
-    const detail = await response.text();
-    throw new Error(detail || `Upload failed with status ${response.status}`);
-  }
-
-  return response.json() as Promise<IngestionResponse>;
 }
 
 export function listDocuments(notebookId: string): Promise<DocumentsListResponse> {

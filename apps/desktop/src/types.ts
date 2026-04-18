@@ -47,7 +47,7 @@ export type ChatStreamEvent =
       conversation_id?: string;
     }
   | { type: 'token'; delta: string }
-  | { type: 'done'; reply: string; metrics?: Record<string, number> }
+  | { type: 'done'; reply: string; metrics?: Record<string, number>; conversation_id?: string }
   | { type: 'error'; message: string }
   | { type: 'warning'; message: string };
 

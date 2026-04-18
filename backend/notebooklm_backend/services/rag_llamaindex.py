@@ -122,7 +122,7 @@ class LlamaIndexRAGService:
 
             # Two-stage retrieval: First filter documents by summary, then retrieve chunks
             # Stage 1: Query document summaries to find relevant documents
-            relevant_summaries = self.vector_store.query_document_summaries(
+            relevant_summaries = await self.vector_store.aquery_document_summaries(
                 notebook_id=notebook_id,
                 query=question,
                 top_k=3,  # Get top 3 most relevant documents

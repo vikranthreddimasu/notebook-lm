@@ -66,30 +66,38 @@ class VectorStoreManager:
 
         return removed
 
+    # Embedding all chunks of a 500-page PDF in one call to `model.encode`
+    # can allocate several GB and OOM. Batching keeps peak memory bounded.
+    _EMBED_BATCH = 64
+
     def add_chunks(self, notebook_id: str, chunks: Iterable[TextChunk]) -> int:
         chunk_list = list(chunks)
         if not chunk_list:
             return 0
 
-        documents = [chunk.text for chunk in chunk_list]
-        embeddings = self.embedding_backend.embed(documents)
-        metadatas = [
-            {
-                "source_path": chunk.source_path,
-                "order": chunk.order,
-            }
-            for chunk in chunk_list
-        ]
-        ids = [chunk.chunk_id for chunk in chunk_list]
-
         collection = self.get_collection(notebook_id)
-        collection.add(
-            ids=ids,
-            documents=documents,
-            metadatas=metadatas,
-            embeddings=embeddings,
-        )
-        return len(chunk_list)
+        total = 0
+        for start in range(0, len(chunk_list), self._EMBED_BATCH):
+            batch = chunk_list[start : start + self._EMBED_BATCH]
+            documents = [chunk.text for chunk in batch]
+            embeddings = self.embedding_backend.embed(documents)
+            metadatas = [
+                {"source_path": chunk.source_path, "order": chunk.order}
+                for chunk in batch
+            ]
+            ids = [chunk.chunk_id for chunk in batch]
+
+            # upsert, not add — a re-upload of the same file would have failed
+            # with DuplicateIDError mid-batch, leaving the collection in an
+            # inconsistent state (some chunks present, some not).
+            collection.upsert(
+                ids=ids,
+                documents=documents,
+                metadatas=metadatas,
+                embeddings=embeddings,
+            )
+            total += len(batch)
+        return total
 
     def query(
         self,
@@ -116,20 +124,60 @@ class VectorStoreManager:
                 # Fallback to unfiltered query if the where syntax is unsupported
                 pass
         return collection.query(**query_kwargs)
+
+    async def aquery(
+        self,
+        notebook_id: str,
+        query: str,
+        top_k: int = 5,
+        where: dict | None = None,
+    ) -> dict:
+        """Async variant: embedding runs on a threadpool so the event loop
+        stays responsive during chat stream setup."""
+        collection = self.get_collection(notebook_id)
+        query_emb = await self.embedding_backend.aembed([query])
+        query_kwargs = {
+            "query_embeddings": query_emb,
+            "n_results": top_k,
+        }
+        if where:
+            try:
+                query_kwargs["where"] = where
+                return collection.query(**query_kwargs)
+            except Exception:
+                pass
+        return collection.query(**query_kwargs)
     
+    async def aquery_across_notebooks(
+        self,
+        notebook_ids: list[str],
+        query: str,
+        top_k: int = 5,
+    ) -> dict:
+        """Async wrapper for cross-notebook query; embeds on a threadpool."""
+        query_emb = await self.embedding_backend.aembed([query])
+        return self._query_across_notebooks_impl(notebook_ids, query_emb, top_k)
+
     def query_across_notebooks(
         self,
         notebook_ids: list[str],
         query: str,
         top_k: int = 5,
     ) -> dict:
+        query_emb = self.embedding_backend.embed([query])
+        return self._query_across_notebooks_impl(notebook_ids, query_emb, top_k)
+
+    def _query_across_notebooks_impl(
+        self,
+        notebook_ids: list[str],
+        query_emb: list[list[float]],
+        top_k: int,
+    ) -> dict:
         """
         Query multiple notebook collections and merge results ranked by distance.
         Returns the same format as a single query() call but with an extra
         'notebook_id' field in each metadata entry.
         """
-        query_emb = self.embedding_backend.embed([query])
-
         all_documents: list[str] = []
         all_metadatas: list[dict] = []
         all_distances: list[float] = []
@@ -204,6 +252,23 @@ class VectorStoreManager:
             embeddings=summary_embedding,
         )
     
+    async def aquery_document_summaries(
+        self,
+        notebook_id: str,
+        query: str,
+        top_k: int = 3,
+    ) -> list[DocumentSummary]:
+        """Async variant: embedding runs on a threadpool."""
+        try:
+            summaries_collection = self.client.get_collection(
+                name=self._doc_summaries_collection_name(notebook_id)
+            )
+        except Exception:
+            return []
+        query_emb = await self.embedding_backend.aembed([query])
+        results = summaries_collection.query(query_embeddings=query_emb, n_results=top_k)
+        return self._build_summaries(results)
+
     def query_document_summaries(
         self,
         notebook_id: str,
@@ -221,10 +286,13 @@ class VectorStoreManager:
         except Exception:
             # No summaries collection yet, return empty
             return []
-        
+
         # Embed query and search summaries
         query_emb = self.embedding_backend.embed([query])
         results = summaries_collection.query(query_embeddings=query_emb, n_results=top_k)
+        return self._build_summaries(results)
+
+    def _build_summaries(self, results: dict) -> list[DocumentSummary]:
         
         # Convert to DocumentSummary objects
         summaries = []
@@ -269,5 +337,10 @@ class VectorStoreManager:
 
 
 def create_vector_store(settings: AppConfig, embedding_backend: EmbeddingBackend) -> VectorStoreManager:
-    client = chromadb.PersistentClient(path=str(settings.index_dir))
+    # anonymized_telemetry=False keeps the offline promise intact and quiets
+    # the "Failed to send telemetry event…" warnings that dominate logs.
+    client = chromadb.PersistentClient(
+        path=str(settings.index_dir),
+        settings=chromadb.Settings(anonymized_telemetry=False),
+    )
     return VectorStoreManager(client=client, embedding_backend=embedding_backend)
