@@ -178,11 +178,34 @@
 .cite-marker {
   color: var(--color-cite);
   font-family: var(--font-mono);
-  font-size: 0.7em;
+  font-size: 0.72em;
   font-variant-numeric: tabular-nums;
   vertical-align: super;
-  margin-left: 4px;
+  margin-left: 3px;
+  margin-right: 1px;
   letter-spacing: 0.04em;
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 0 3px;
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+.cite-marker:hover {
+  background: var(--color-cite-subtle);
+  color: var(--color-cite-hover);
+}
+
+.cite-marker:focus-visible {
+  outline: none;
+  background: var(--color-cite-subtle);
+  box-shadow: 0 0 0 2px var(--color-cite-glow);
+}
+
+.cite-marker-orphan {
+  color: var(--color-text-muted);
+  cursor: help;
 }
 
 /* Uncertainty banner — when retrieval confidence is low */

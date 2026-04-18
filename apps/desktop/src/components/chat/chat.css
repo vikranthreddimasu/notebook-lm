@@ -294,6 +294,26 @@
   color: var(--color-error) !important;
 }
 
+.message-bubble-aborted .message-body {
+  opacity: 0.68;
+}
+
+.message-aborted-tag {
+  display: inline-flex;
+  align-items: center;
+  margin-top: var(--space-2);
+  padding: 2px 10px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+}
+
 .message-retry-btn {
   background: transparent;
   border: 1px solid rgba(251, 113, 133, 0.3);

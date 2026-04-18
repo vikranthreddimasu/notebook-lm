@@ -14,6 +14,7 @@ import { SetupWizard } from '../ui/SetupWizard';
 import { CommandPalette } from '../ui/CommandPalette';
 import { KeyboardShortcutsOverlay } from '../ui/KeyboardShortcuts';
 import { ZoteroImportDialog } from '../ui/ZoteroImport';
+import type { SourceChunk } from '../../types';
 import './layout.css';
 
 function isWizardComplete(): boolean {
@@ -35,6 +36,9 @@ export function AppShell() {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [zoteroOpen, setZoteroOpen] = useState(false);
   const [highlightText, setHighlightText] = useState<string | null>(null);
+  // Shared between SourcePanel card-hover and MessageBubble citation-hover so
+  // the two-way link between a sentence and its source card is visible.
+  const [hoveredSourceIndex, setHoveredSourceIndex] = useState<number | null>(null);
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -208,21 +212,44 @@ export function AppShell() {
     );
   }
 
+  // Single entry point for opening a source — called from both the source
+  // panel card click and citation marker click in MessageBubble. Keeps the
+  // fetch/open/highlight dance in one place.
+  const openSource = useCallback(
+    async (source: SourceChunk) => {
+      const notebookId = source.notebook_id || activeNotebookId;
+      if (!notebookId) return;
+      try {
+        const url = await getDocumentPreviewUrl(notebookId, source.source_path);
+        const filename = source.document_name || source.source_path.split(/[/\\]/).pop() || source.source_path;
+        setResolvedPreviewUrl(url);
+        setHighlightText(source.preview);
+        setPreviewDocument({ filename, source_path: source.source_path, chunk_count: 0, preview: '' });
+      } catch {
+        showToast('Could not open source', 'error');
+      }
+    },
+    [activeNotebookId, setPreviewDocument],
+  );
+
   return (
     <>
       <div className="app-shell">
         <Sidebar />
-        <ChatView pendingSuggest={pendingSuggest} onSuggestConsumed={() => setPendingSuggest(null)} />
-        <SourcePanel onSourceClick={async (sourcePath, preview) => {
-          if (!activeNotebookId) return;
-          try {
-            const url = await getDocumentPreviewUrl(activeNotebookId, sourcePath);
-            const filename = sourcePath.split(/[/\\]/).pop() ?? sourcePath;
-            setResolvedPreviewUrl(url);
-            setHighlightText(preview);
-            setPreviewDocument({ filename, source_path: sourcePath, chunk_count: 0, preview: '' });
-          } catch {}
-        }} />
+        <ChatView
+          pendingSuggest={pendingSuggest}
+          onSuggestConsumed={() => setPendingSuggest(null)}
+          onCitationClick={(source, index) => {
+            setHoveredSourceIndex(index);
+            openSource(source);
+          }}
+          onCitationHover={setHoveredSourceIndex}
+        />
+        <SourcePanel
+          onSourceClick={(source) => openSource(source)}
+          hoveredIndex={hoveredSourceIndex}
+          onCardHover={setHoveredSourceIndex}
+        />
       </div>
 
       {previewDocument && activeNotebookId && resolvedPreviewUrl && (

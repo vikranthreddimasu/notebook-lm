@@ -6,6 +6,7 @@ import { MessageBubble } from './MessageBubble';
 import { QuickChips } from './QuickChips';
 import { OverflowMenu } from '../ui/OverflowMenu';
 import { downloadBibtex } from '../../utils/bibtex';
+import type { SourceChunk } from '../../types';
 import './chat.css';
 
 const EMPTY_CHIPS = [
@@ -19,7 +20,14 @@ const FOLLOWUP_CHIPS = [
   'Simplify this',
 ];
 
-export function ChatView({ pendingSuggest, onSuggestConsumed }: { pendingSuggest?: string | null; onSuggestConsumed?: () => void } = {}) {
+interface ChatViewProps {
+  pendingSuggest?: string | null;
+  onSuggestConsumed?: () => void;
+  onCitationClick?: (source: SourceChunk, index: number) => void;
+  onCitationHover?: (index: number | null) => void;
+}
+
+export function ChatView({ pendingSuggest, onSuggestConsumed, onCitationClick, onCitationHover }: ChatViewProps = {}) {
   const { messages, isStreaming, send, clearChat, abort } = useChat();
   const activeNotebookId = useAppStore((s) => s.activeNotebookId);
   const notebooks = useAppStore((s) => s.notebooks);
@@ -44,9 +52,13 @@ export function ChatView({ pendingSuggest, onSuggestConsumed }: { pendingSuggest
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
+  // Auto-scroll during streaming only if the user is already near the bottom.
+  // Prior behavior snapped scrolled-up users back down on every token.
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    if (!isScrolledUp) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, isScrolledUp]);
 
   useEffect(() => {
     if (!isStreaming && status === 'ready') {
@@ -171,6 +183,9 @@ export function ChatView({ pendingSuggest, onSuggestConsumed }: { pendingSuggest
           <MessageBubble
             key={msg.id}
             message={msg}
+            sources={activeSources}
+            onCitationClick={onCitationClick}
+            onCitationHover={onCitationHover}
             onRetry={
               msg.role === 'assistant' && msg.content.startsWith('Error: ')
                 ? () => {

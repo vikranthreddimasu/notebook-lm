@@ -1,11 +1,19 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 import './DocumentPreview.css';
 
-// Set up PDF.js worker - use local worker for offline support
-// Worker file copied from react-pdf's pdfjs-dist (version 5.4.296) to public directory
+// Structural subset of the PDFDocumentProxy shape we actually use. Avoids
+// react-pdf's bundled pdfjs-dist type-identity skew with top-level pdfjs-dist.
+interface LoadedPdf {
+  numPages: number;
+  getPage: (n: number) => Promise<{
+    getTextContent: () => Promise<{ items: Array<{ str?: string } | unknown> }>;
+  }>;
+}
+
+// Local worker — keeps this offline-first.
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
 interface DocumentPreviewProps {
@@ -28,93 +36,108 @@ function DocumentPreview({ isOpen, onClose, documentUrl, filename, highlightText
   const [scale, setScale] = useState(1.2);
   const [showAllPages, setShowAllPages] = useState(false);
   const [highlightPageFound, setHighlightPageFound] = useState(false);
+  const overlayRef = useRef<HTMLDivElement>(null);
 
   const isPdf = filename.toLowerCase().endsWith('.pdf');
 
-  // Search snippet: take first 60 chars of highlight text for matching
-  const searchSnippet = highlightText
-    ? normalizeText(highlightText).slice(0, 60)
-    : null;
+  // Tight search target — first 60 chars of the normalized snippet.
+  const searchSnippet = highlightText ? normalizeText(highlightText).slice(0, 60) : null;
 
+  // Re-focus the overlay when a new preview opens so keyboard shortcuts work
+  // without a click-to-focus step.
   useEffect(() => {
     if (isOpen) {
       setPageNumber(1);
       setLoading(true);
       setError(null);
       setHighlightPageFound(false);
+      const id = requestAnimationFrame(() => overlayRef.current?.focus());
+      return () => cancelAnimationFrame(id);
     }
   }, [isOpen, documentUrl]);
 
-  const onDocumentLoadSuccess = useCallback(async ({ numPages: np }: { numPages: number }) => {
-    setNumPages(np);
-    setLoading(false);
-    setError(null);
+  // Use the react-pdf-loaded proxy (passed to onLoadSuccess) for the text
+  // search instead of loading the PDF a second time via pdfjs.getDocument.
+  const onDocumentLoadSuccess = useCallback(
+    async (pdfLike: { numPages: number }) => {
+      const pdf = pdfLike as unknown as LoadedPdf;
+      const np = pdf.numPages;
+      setNumPages(np);
+      setLoading(false);
+      setError(null);
 
-    // If we have highlight text, find which page contains it
-    if (searchSnippet && isPdf) {
+      if (!searchSnippet || !isPdf) return;
       try {
-        const pdf = await pdfjs.getDocument(documentUrl).promise;
         for (let i = 1; i <= np; i++) {
           const page = await pdf.getPage(i);
           const textContent = await page.getTextContent();
           const pageText = normalizeText(
-            textContent.items.map((item) => ('str' in item ? item.str : '')).join(' ')
+            textContent.items
+              .map((item) =>
+                typeof item === 'object' && item && 'str' in item && typeof (item as { str?: unknown }).str === 'string'
+                  ? (item as { str: string }).str
+                  : '',
+              )
+              .join(' '),
           );
           if (pageText.includes(searchSnippet)) {
             setPageNumber(i);
             setHighlightPageFound(true);
             setShowAllPages(false);
-            break;
+            return;
           }
         }
       } catch {
-        // Failed to search, just show page 1
+        // Search failed — leave viewer on page 1.
       }
-    }
-  }, [searchSnippet, documentUrl, isPdf]);
+    },
+    [searchSnippet, isPdf],
+  );
 
   const onDocumentLoadError = (error: Error) => {
     setError(`Failed to load document: ${error.message}`);
     setLoading(false);
   };
 
-  const goToPrevPage = () => {
-    setPageNumber((prev) => Math.max(1, prev - 1));
-  };
-
-  const goToNextPage = () => {
-    setPageNumber((prev) => Math.min(numPages || 1, prev + 1));
-  };
+  const goToPrevPage = () => setPageNumber((prev) => Math.max(1, prev - 1));
+  const goToNextPage = () => setPageNumber((prev) => Math.min(numPages || 1, prev + 1));
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      onClose();
-    } else if (e.key === 'ArrowLeft') {
-      goToPrevPage();
-    } else if (e.key === 'ArrowRight') {
-      goToNextPage();
-    } else if (e.key === '+' || e.key === '=') {
-      setScale((prev) => Math.min(3, prev + 0.1));
-    } else if (e.key === '-') {
-      setScale((prev) => Math.max(0.5, prev - 0.1));
-    }
+    if (e.key === 'Escape') onClose();
+    else if (e.key === 'ArrowLeft') goToPrevPage();
+    else if (e.key === 'ArrowRight') goToNextPage();
+    else if (e.key === '+' || e.key === '=') setScale((prev) => Math.min(3, prev + 0.1));
+    else if (e.key === '-') setScale((prev) => Math.max(0.5, prev - 0.1));
   };
 
-  // Custom text renderer that highlights matching text
+  /**
+   * Highlight text renderer. Uses the longest-contiguous-word-run match so
+   * unrelated paragraphs don't get painted amber. Threshold is "this item
+   * contains a run of at least N consecutive snippet words."
+   */
   const customTextRenderer = useCallback(
     (textItem: { str: string }) => {
       if (!searchSnippet) return textItem.str;
-
       const normalizedItem = normalizeText(textItem.str);
-      // Check if this text item contains part of the search snippet
-      // Use a simpler word-overlap approach for partial matching
-      const words = searchSnippet.split(' ').filter((w) => w.length > 3);
-      if (words.length === 0) return textItem.str;
+      if (!normalizedItem) return textItem.str;
 
-      const matchCount = words.filter((w) => normalizedItem.includes(w)).length;
-      const matchRatio = matchCount / words.length;
+      const snippetWords = searchSnippet.split(' ').filter((w) => w.length > 2);
+      if (snippetWords.length === 0) return textItem.str;
 
-      if (matchRatio >= 0.3) {
+      // Find the longest run of consecutive snippet words present in this item.
+      let bestRun = 0;
+      let current = 0;
+      for (const w of snippetWords) {
+        if (normalizedItem.includes(w)) {
+          current += 1;
+          bestRun = Math.max(bestRun, current);
+        } else {
+          current = 0;
+        }
+      }
+
+      const minRun = Math.min(4, Math.max(2, Math.floor(snippetWords.length * 0.6)));
+      if (bestRun >= minRun) {
         return `<mark class="pdf-highlight">${textItem.str}</mark>`;
       }
       return textItem.str;
@@ -125,7 +148,16 @@ function DocumentPreview({ isOpen, onClose, documentUrl, filename, highlightText
   if (!isOpen) return null;
 
   return (
-    <div className="document-preview-overlay" onClick={onClose} onKeyDown={handleKeyDown} tabIndex={-1}>
+    <div
+      ref={overlayRef}
+      className="document-preview-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Preview: ${filename}`}
+      onClick={onClose}
+      onKeyDown={handleKeyDown}
+      tabIndex={-1}
+    >
       <div className="document-preview-container" onClick={(e) => e.stopPropagation()}>
         <div className="document-preview-header">
           <h3 className="document-preview-title">{filename}</h3>
@@ -135,23 +167,25 @@ function DocumentPreview({ isOpen, onClose, documentUrl, filename, highlightText
           <div className="document-preview-controls">
             {isPdf && numPages && (
               <>
-                <div className="document-preview-pagination">
+                <div className="document-preview-pagination" role="group" aria-label="Page navigation">
                   <button
                     type="button"
                     className="preview-nav-button"
                     onClick={goToPrevPage}
                     disabled={pageNumber <= 1 || showAllPages}
+                    aria-label="Previous page"
                   >
                     ←
                   </button>
                   <span className="preview-page-info">
-                    {showAllPages ? `All pages` : `${pageNumber} / ${numPages}`}
+                    {showAllPages ? 'All pages' : `${pageNumber} / ${numPages}`}
                   </span>
                   <button
                     type="button"
                     className="preview-nav-button"
                     onClick={goToNextPage}
                     disabled={pageNumber >= numPages || showAllPages}
+                    aria-label="Next page"
                   >
                     →
                   </button>
@@ -160,18 +194,19 @@ function DocumentPreview({ isOpen, onClose, documentUrl, filename, highlightText
                   type="button"
                   className="preview-view-toggle"
                   onClick={() => setShowAllPages(!showAllPages)}
-                  title={showAllPages ? 'Switch to single page view' : 'Show all pages (scrollable)'}
+                  aria-label={showAllPages ? 'Show single page' : 'Show all pages'}
                 >
-                  {showAllPages ? '📄 Single' : '📑 All'}
+                  {showAllPages ? 'Single' : 'All pages'}
                 </button>
               </>
             )}
             {isPdf && (
-              <div className="document-preview-zoom">
+              <div className="document-preview-zoom" role="group" aria-label="Zoom">
                 <button
                   type="button"
                   className="preview-zoom-button"
                   onClick={() => setScale((prev) => Math.max(0.5, prev - 0.1))}
+                  aria-label="Zoom out"
                 >
                   −
                 </button>
@@ -180,26 +215,32 @@ function DocumentPreview({ isOpen, onClose, documentUrl, filename, highlightText
                   type="button"
                   className="preview-zoom-button"
                   onClick={() => setScale((prev) => Math.min(3, prev + 0.1))}
+                  aria-label="Zoom in"
                 >
                   +
                 </button>
               </div>
             )}
-            <button type="button" className="preview-close-button" onClick={onClose}>
+            <button
+              type="button"
+              className="preview-close-button"
+              onClick={onClose}
+              aria-label="Close preview"
+            >
               ✕
             </button>
           </div>
         </div>
 
         <div className="document-preview-content">
-          {loading && <div className="preview-loading">Loading document...</div>}
+          {loading && <div className="preview-loading">Loading&hellip;</div>}
           {error && <div className="preview-error">{error}</div>}
           {!error && isPdf && (
             <Document
               file={documentUrl}
               onLoadSuccess={onDocumentLoadSuccess}
               onLoadError={onDocumentLoadError}
-              loading={<div className="preview-loading">Loading PDF...</div>}
+              loading={<div className="preview-loading">Loading&hellip;</div>}
             >
               {showAllPages && numPages ? (
                 <div className="preview-pages-container">
