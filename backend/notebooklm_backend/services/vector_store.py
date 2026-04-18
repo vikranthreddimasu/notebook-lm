@@ -23,6 +23,21 @@ class VectorStoreManager:
     def get_collection(self, notebook_id: str) -> Collection:
         return self.client.get_or_create_collection(name=self._collection_name(notebook_id))
 
+    def delete_notebook_collections(self, notebook_id: str) -> None:
+        """Drop the chunk and summary collections for a deleted notebook.
+
+        Both deletes are best-effort: missing collections are not an error.
+        """
+        for name in (
+            self._collection_name(notebook_id),
+            self._doc_summaries_collection_name(notebook_id),
+        ):
+            try:
+                self.client.delete_collection(name=name)
+            except Exception:
+                # Collection may not exist yet for never-ingested notebooks.
+                pass
+
     def add_chunks(self, notebook_id: str, chunks: Iterable[TextChunk]) -> int:
         chunk_list = list(chunks)
         if not chunk_list:

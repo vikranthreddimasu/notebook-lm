@@ -177,10 +177,14 @@ class NotebookStore:
                 """,
                 ("completed", message, now.isoformat(), source_count, chunk_count, job_id),
             )
+            # Accumulate counts across multiple ingestion jobs for the same notebook
+            # (a 6th upload should leave source_count at 6, not reset to 1).
             conn.execute(
                 """
                 UPDATE notebooks
-                SET source_count = ?, chunk_count = ?, updated_at = ?
+                SET source_count = source_count + ?,
+                    chunk_count = chunk_count + ?,
+                    updated_at = ?
                 WHERE notebook_id = ?
                 """,
                 (source_count, chunk_count, now.isoformat(), notebook_id),

@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useAppStore } from '../store/app-store';
 import { streamChatMessage, sendChatMessage, listConversations } from '../api';
 import { showToast } from '../components/ui/Toast';
@@ -7,30 +7,48 @@ import type { ChatStreamEvent, SourceChunk } from '../types';
 export function useChat() {
   const messages = useAppStore((s) => s.messages);
   const isStreaming = useAppStore((s) => s.isStreaming);
+  const activeNotebookId = useAppStore((s) => s.activeNotebookId);
 
-  const assistantIndexRef = useRef<number | null>(null);
+  const assistantIdRef = useRef<string | null>(null);
   const bufferRef = useRef('');
   const abortRef = useRef<AbortController | null>(null);
+  // True only for genuine user-initiated aborts, so we know not to fall back to
+  // the non-streaming endpoint (otherwise "stop" still delivers the full reply).
+  const userAbortedRef = useRef(false);
+
+  // Cancel any in-flight stream when the user switches notebooks. The store's
+  // setActiveNotebookId also clears messages and activeSources, so we just
+  // need to tear down the network side here.
+  useEffect(() => {
+    return () => {
+      if (abortRef.current) {
+        userAbortedRef.current = true;
+        abortRef.current.abort();
+        abortRef.current = null;
+      }
+    };
+  }, [activeNotebookId]);
 
   const send = useCallback(
     async (prompt: string) => {
       if (!prompt.trim() || useAppStore.getState().isStreaming) return;
 
       const store = useAppStore.getState();
-      const history = store.messages.map((m) => ({ role: m.role, content: m.content }));
+      // Build history from only the messages visible to the user. A previously
+      // aborted assistant turn, if still on screen, was already pruned below —
+      // but filter defensively in case.
+      const history = store.messages
+        .filter((m) => !(m.role === 'assistant' && m.aborted && m.content === ''))
+        .map((m) => ({ role: m.role, content: m.content }));
 
       store.addMessage({ role: 'user', content: prompt });
-
-      const afterUser = useAppStore.getState().messages;
-      const assistantIndex = afterUser.length;
-      store.addMessage({ role: 'assistant', content: '' });
-      assistantIndexRef.current = assistantIndex;
+      const assistantId = store.addMessage({ role: 'assistant', content: '', streaming: true });
+      assistantIdRef.current = assistantId;
       bufferRef.current = '';
 
       store.setIsStreaming(true);
       store.setActiveSources([]);
 
-      // Cross-notebook mode: send all notebook IDs instead of just one
       const crossMode = store.crossNotebookMode;
       const body = {
         prompt,
@@ -42,6 +60,7 @@ export function useChat() {
 
       const handleEvent = (event: ChatStreamEvent) => {
         const s = useAppStore.getState();
+        const id = assistantIdRef.current;
         switch (event.type) {
           case 'meta': {
             const sources: SourceChunk[] = (event.sources ?? []).map((src) => ({
@@ -50,15 +69,19 @@ export function useChat() {
               relevance_score: src.relevance_score,
             }));
             s.setActiveSources(sources);
-            // Capture conversation_id from backend (created on first message)
             if (event.conversation_id && !s.activeConversationId) {
               s.setActiveConversationId(event.conversation_id);
-              // Optimistic title: use first user message
               const firstMsg = s.messages.find((m) => m.role === 'user');
               if (firstMsg) {
                 const title = firstMsg.content.slice(0, 50).trim();
                 s.setConversations([
-                  { id: event.conversation_id, notebook_id: s.activeNotebookId ?? '', title, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+                  {
+                    id: event.conversation_id,
+                    notebook_id: s.activeNotebookId ?? '',
+                    title,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                  },
                   ...s.conversations,
                 ]);
               }
@@ -67,17 +90,12 @@ export function useChat() {
           }
           case 'token':
             bufferRef.current += event.delta;
-            if (assistantIndexRef.current !== null) {
-              s.updateMessageAt(assistantIndexRef.current, bufferRef.current);
-            }
+            if (id) s.updateMessage(id, { content: bufferRef.current });
             break;
           case 'done':
-            if (assistantIndexRef.current !== null) {
-              s.updateMessageAt(assistantIndexRef.current, event.reply);
-            }
+            if (id) s.updateMessage(id, { content: event.reply, streaming: false });
             s.setIsStreaming(false);
-            assistantIndexRef.current = null;
-            // Refresh conversation list to get backend-accurate titles
+            assistantIdRef.current = null;
             if (s.activeNotebookId) {
               listConversations(s.activeNotebookId)
                 .then((convs) => useAppStore.getState().setConversations(convs))
@@ -85,11 +103,9 @@ export function useChat() {
             }
             break;
           case 'error':
-            if (assistantIndexRef.current !== null) {
-              s.updateMessageAt(assistantIndexRef.current, `Error: ${event.message}`);
-            }
+            if (id) s.updateMessage(id, { content: `Error: ${event.message}`, streaming: false });
             s.setIsStreaming(false);
-            assistantIndexRef.current = null;
+            assistantIdRef.current = null;
             break;
           case 'warning':
             showToast(event.message, 'error');
@@ -99,26 +115,52 @@ export function useChat() {
 
       const controller = new AbortController();
       abortRef.current = controller;
+      userAbortedRef.current = false;
 
       try {
         await streamChatMessage(body, handleEvent, controller.signal);
         abortRef.current = null;
-      } catch {
+      } catch (err) {
+        const wasUserAbort = userAbortedRef.current || controller.signal.aborted;
         abortRef.current = null;
+
+        if (wasUserAbort) {
+          // User clicked stop. Mark the partial message as aborted and bail —
+          // do NOT fall back to the non-streaming endpoint (that would ignore
+          // the abort and deliver the full reply anyway).
+          const id = assistantIdRef.current;
+          if (id) {
+            const state = useAppStore.getState();
+            const msg = state.messages.find((m) => m.id === id);
+            if (msg && msg.content.length === 0) {
+              // Nothing to keep — remove the empty assistant bubble entirely.
+              state.removeMessage(id);
+            } else if (id) {
+              state.updateMessage(id, { streaming: false, aborted: true });
+            }
+          }
+          useAppStore.getState().setIsStreaming(false);
+          assistantIdRef.current = null;
+          return;
+        }
+
+        // Real stream failure — try non-streaming fallback, but respect abort.
         try {
           const response = await sendChatMessage(body);
-          if (assistantIndexRef.current !== null) {
-            useAppStore.getState().updateMessageAt(assistantIndexRef.current, response.reply);
-          }
+          const id = assistantIdRef.current;
+          if (id) useAppStore.getState().updateMessage(id, { content: response.reply, streaming: false });
         } catch (fallbackErr) {
-          if (assistantIndexRef.current !== null) {
+          const id = assistantIdRef.current;
+          if (id) {
             const msg =
               fallbackErr instanceof Error ? fallbackErr.message : 'Failed to get response';
-            useAppStore.getState().updateMessageAt(assistantIndexRef.current, `Error: ${msg}`);
+            useAppStore.getState().updateMessage(id, { content: `Error: ${msg}`, streaming: false });
           }
+          // Original stream error tells us more than the fallback one, usually.
+          console.warn('[chat] stream failed, fallback also failed', err, fallbackErr);
         } finally {
           useAppStore.getState().setIsStreaming(false);
-          assistantIndexRef.current = null;
+          assistantIdRef.current = null;
         }
       }
     },
@@ -126,13 +168,19 @@ export function useChat() {
   );
 
   const clearChat = useCallback(() => {
-    const s = useAppStore.getState();
-    s.clearMessages();
-    s.setActiveConversationId(null);
+    // Also tear down any in-flight stream so it doesn't keep streaming into
+    // a conversation the user just wiped.
+    if (abortRef.current) {
+      userAbortedRef.current = true;
+      abortRef.current.abort();
+      abortRef.current = null;
+    }
+    useAppStore.getState().newChat();
   }, []);
 
   const abort = useCallback(() => {
     if (abortRef.current) {
+      userAbortedRef.current = true;
       abortRef.current.abort();
       abortRef.current = null;
     }

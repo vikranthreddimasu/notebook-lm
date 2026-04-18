@@ -169,20 +169,19 @@ export function ChatView({ pendingSuggest, onSuggestConsumed }: { pendingSuggest
         )}
         {messages.map((msg, i) => (
           <MessageBubble
-            key={i}
+            key={msg.id}
             message={msg}
             onRetry={
               msg.role === 'assistant' && msg.content.startsWith('Error: ')
                 ? () => {
-                    // Find the user message above this error
                     const userMsg = messages[i - 1];
                     if (userMsg?.role === 'user') {
-                      // Remove error + user message, re-send
+                      // Drop the failed assistant turn + the triggering user message,
+                      // then resend as a fresh exchange. One atomic setMessages call
+                      // avoids N re-renders that reintroduce streaming flicker.
                       const store = useAppStore.getState();
-                      const newMessages = messages.slice(0, i - 1);
-                      // We can't directly set messages in store, so clear and re-add
-                      store.clearMessages();
-                      newMessages.forEach((m) => store.addMessage(m));
+                      store.setMessages(messages.slice(0, i - 1));
+                      store.setActiveSources([]);
                       send(userMsg.content);
                     }
                   }

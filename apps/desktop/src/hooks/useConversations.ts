@@ -27,20 +27,35 @@ export function useConversations() {
 
   const loadConversation = useCallback(async (conversationId: string) => {
     const store = useAppStore.getState();
-    store.setActiveConversationId(conversationId);
-    store.clearMessages();
+    // Fetch first so we don't destroy the current context on a network error.
+    let msgs;
     try {
-      const msgs = await getConversationMessages(conversationId);
-      for (const msg of msgs) {
-        store.addMessage({ role: msg.role as 'user' | 'assistant', content: msg.content });
-        if (msg.sources) {
-          store.setActiveSources(msg.sources);
-        }
-      }
+      msgs = await getConversationMessages(conversationId);
     } catch {
       showToast('Failed to load conversation', 'error');
-      store.setActiveConversationId(null);
+      return;
     }
+
+    // Normalize historical sources so document_name is populated (same shape
+    // the streaming path produces). Without this the source panel renders
+    // blank entries on reload.
+    const normalizedMessages = msgs.map((msg) => ({
+      id: msg.id,
+      role: msg.role as 'user' | 'assistant',
+      content: msg.content,
+    }));
+    const lastWithSources = [...msgs].reverse().find((m) => m.sources && m.sources.length > 0);
+    const restoredSources = lastWithSources?.sources
+      ? lastWithSources.sources.map((s) => ({
+          ...s,
+          document_name: s.document_name ?? (s.source_path.split(/[/\\]/).pop() ?? s.source_path),
+        }))
+      : [];
+
+    // Now swap state in one shot — no incremental renders, no torn intermediates.
+    store.setActiveConversationId(conversationId);
+    store.setMessages(normalizedMessages);
+    store.setActiveSources(restoredSources);
   }, []);
 
   const deleteConv = useCallback(async (conversationId: string) => {
@@ -48,8 +63,7 @@ export function useConversations() {
       await apiDeleteConversation(conversationId);
       const store = useAppStore.getState();
       if (store.activeConversationId === conversationId) {
-        store.setActiveConversationId(null);
-        store.clearMessages();
+        store.newChat();
       }
       await refresh();
       showToast('Conversation deleted', 'success');

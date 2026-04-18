@@ -162,8 +162,17 @@ ipcMain.handle('dialog:choosePath', async (_, options = {}) => {
   return result.filePaths[0];
 });
 
+// Only allow http(s) and mailto — never file://, javascript:, or other
+// dangerous schemes. A renderer-side XSS via rendered markdown should not
+// be able to escalate into arbitrary OS actions.
+const SAFE_OPEN_SCHEMES = /^(https?:|mailto:)/i;
+
 ipcMain.handle('app:openExternal', async (_, url) => {
-  if (!url) return false;
+  if (typeof url !== 'string' || !url) return false;
+  if (!SAFE_OPEN_SCHEMES.test(url)) {
+    console.warn('[security] refused openExternal for scheme:', url.slice(0, 32));
+    return false;
+  }
   await shell.openExternal(url);
   return true;
 });
