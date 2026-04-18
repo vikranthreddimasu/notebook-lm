@@ -1,22 +1,29 @@
+/* Document preview modal — warm-stone palette, tokens only.
+ * Lived as cold neutrals (#1f1f1f, #e5e5e5) until Wave 2 of the UX rebuild.
+ */
+
 .document-preview-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.85);
+  inset: 0;
+  background: rgba(12, 10, 9, 0.82);
+  backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 10000;
-  padding: 2rem;
-  backdrop-filter: blur(4px);
+  padding: var(--space-6);
+  animation: docOverlayIn 180ms var(--ease-out);
+}
+
+@keyframes docOverlayIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .document-preview-container {
-  background: #1f1f1f;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 12px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-modal);
   width: 90vw;
   height: 90vh;
   max-width: 1200px;
@@ -24,124 +31,134 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-lg);
+  animation: docContainerIn 220ms var(--ease-out);
+}
+
+@keyframes docContainerIn {
+  from { opacity: 0; transform: translateY(6px) scale(0.99); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .document-preview-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background: #171717;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-elevated);
   flex-shrink: 0;
+  gap: var(--space-4);
 }
 
 .document-preview-title {
   margin: 0;
-  font-size: 0.9375rem;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
   font-weight: 600;
-  color: #f5f5f5;
+  letter-spacing: -0.01em;
+  color: var(--color-text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   flex: 1;
-  margin-right: 1rem;
 }
 
 .document-preview-controls {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: var(--space-3);
 }
 
-.document-preview-pagination {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 6px;
-  padding: 0.25rem 0.5rem;
-}
-
-.preview-nav-button {
-  background: none;
-  border: none;
-  color: #e5e5e5;
-  font-size: 1rem;
-  cursor: pointer;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  transition: background 0.2s ease;
-}
-
-.preview-nav-button:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.preview-nav-button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.preview-page-info {
-  font-size: 0.8125rem;
-  color: #a3a3a3;
-  min-width: 60px;
-  text-align: center;
-  font-weight: 500;
-}
-
+.document-preview-pagination,
 .document-preview-zoom {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 6px;
-  padding: 0.25rem 0.5rem;
+  gap: var(--space-1);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  padding: 2px var(--space-1);
 }
 
+.preview-nav-button,
 .preview-zoom-button {
-  background: none;
+  background: transparent;
   border: none;
-  color: #e5e5e5;
-  font-size: 1rem;
-  cursor: pointer;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  transition: background 0.2s ease;
-  font-weight: 600;
-}
-
-.preview-zoom-button:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.preview-zoom-info {
-  font-size: 0.8125rem;
-  color: #a3a3a3;
-  min-width: 50px;
-  text-align: center;
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: 14px;
   font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: var(--radius-pill);
+  transition: background var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+.preview-nav-button:hover:not(:disabled),
+.preview-zoom-button:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+.preview-nav-button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.preview-page-info,
+.preview-zoom-info {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  min-width: 60px;
+  text-align: center;
 }
 
 .preview-close-button {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 6px;
-  color: #e5e5e5;
-  font-size: 1.25rem;
-  cursor: pointer;
-  padding: 0.5rem 0.75rem;
-  transition: all 0.2s ease;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  color: var(--color-text-secondary);
+  font-family: var(--font-sans);
+  font-size: 18px;
   line-height: 1;
+  cursor: pointer;
+  padding: 6px 12px;
+  transition: background var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
 }
 
 .preview-close-button:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+  border-color: var(--color-border-hover);
+}
+
+.preview-view-toggle {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  color: var(--color-text-secondary);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  cursor: pointer;
+  padding: 6px 14px;
+  transition: background var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+}
+
+.preview-view-toggle:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+  border-color: var(--color-border-hover);
 }
 
 .document-preview-content {
@@ -150,21 +167,24 @@
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: 2rem;
-  background: #171717;
+  padding: var(--space-6);
+  background: var(--color-bg-primary);
   position: relative;
 }
 
 .preview-loading {
-  color: #a3a3a3;
-  font-size: 0.9375rem;
+  color: var(--color-text-secondary);
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: var(--text-lg);
+  letter-spacing: -0.01em;
 }
 
 .preview-error {
-  color: #f87171;
-  font-size: 0.9375rem;
+  color: var(--color-error);
+  font-size: var(--text-sm);
   text-align: center;
-  padding: 2rem;
+  padding: var(--space-6);
 }
 
 .preview-single-page-container {
@@ -173,51 +193,34 @@
   align-items: flex-start;
   width: 100%;
   min-height: 100%;
-  padding-top: 1rem;
+  padding-top: var(--space-2);
 }
 
 .preview-pages-container {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1.5rem;
+  gap: var(--space-5);
   width: 100%;
-  padding: 1rem 0;
+  padding: var(--space-3) 0;
 }
 
 .preview-pdf-page {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  border-radius: 4px;
+  box-shadow: var(--shadow-md);
+  border-radius: var(--radius-xs);
   background: white;
   margin: 0 auto;
-}
-
-.preview-view-toggle {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 6px;
-  color: #e5e5e5;
-  font-size: 0.8125rem;
-  cursor: pointer;
-  padding: 0.5rem 0.75rem;
-  transition: all 0.2s ease;
-  font-weight: 500;
-}
-
-.preview-view-toggle:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.15);
 }
 
 .preview-iframe {
   width: 100%;
   height: 100%;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   background: white;
 }
 
-/* PDF text highlight — citation grounding, uses amber cite color */
+/* PDF text highlight — amber citation glow, NEVER Tailwind warning yellow */
 .pdf-highlight {
   background: rgba(217, 146, 90, 0.32);
   border-radius: 2px;
@@ -226,10 +229,12 @@
 }
 
 .preview-highlight-badge {
+  display: inline-flex;
+  align-items: center;
   font-family: var(--font-mono);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
   color: var(--color-cite);
   font-weight: 500;
   padding: 3px 10px;
@@ -238,4 +243,3 @@
   border-radius: var(--radius-pill);
   white-space: nowrap;
 }
-
