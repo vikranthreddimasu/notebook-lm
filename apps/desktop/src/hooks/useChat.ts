@@ -94,6 +94,11 @@ export function useChat() {
             break;
           case 'done':
             if (id) s.updateMessage(id, { content: event.reply, streaming: false });
+            // Defensive: if meta was lost, the done event also carries the
+            // conversation_id so we don't fork the thread on the next send.
+            if (event.conversation_id && !s.activeConversationId) {
+              s.setActiveConversationId(event.conversation_id);
+            }
             s.setIsStreaming(false);
             assistantIdRef.current = null;
             if (s.activeNotebookId) {

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 from dataclasses import dataclass, field
 from functools import cached_property
@@ -9,6 +10,11 @@ from typing import AsyncIterator, Protocol
 import httpx
 
 from ..config import AppConfig
+
+# Finite timeouts on the streaming generation request. Prior code used
+# timeout=None which tied up the connection indefinitely when Ollama hung.
+# Read of 300s is generous for long completions; connect/write are fast.
+_OLLAMA_STREAM_TIMEOUT = httpx.Timeout(connect=5.0, read=300.0, write=10.0, pool=5.0)
 
 try:
     from llama_cpp import Llama  # type: ignore
@@ -62,7 +68,7 @@ class OllamaBackend:
             "options": {"num_predict": max_tokens},
         }
         try:
-            async with httpx.AsyncClient(timeout=None) as client:
+            async with httpx.AsyncClient(timeout=_OLLAMA_STREAM_TIMEOUT) as client:
                 async with client.stream("POST", f"{self.base_url}/api/generate", json=payload) as response:
                     response.raise_for_status()
                     async for line in response.aiter_lines():
@@ -122,16 +128,33 @@ class LlamaCppBackend:
 
     async def generate(self, prompt: str, max_tokens: int) -> str:
         llama = self._ensure_model()
-        completion = llama.create_completion(
-            prompt=prompt,
-            max_tokens=max_tokens,
-            stream=False,
+        # llama_cpp is a C-bound blocking call; run in the default executor
+        # so the event loop (and any concurrent health checks / UI fetches)
+        # stay responsive during inference.
+        loop = asyncio.get_running_loop()
+        completion = await loop.run_in_executor(
+            None,
+            lambda: llama.create_completion(prompt=prompt, max_tokens=max_tokens, stream=False),
         )
         return completion["choices"][0]["text"].strip()
 
     async def stream_generate(self, prompt: str, max_tokens: int) -> AsyncIterator[str]:
         llama = self._ensure_model()
-        for chunk in llama.create_completion(prompt=prompt, max_tokens=max_tokens, stream=True):
+        loop = asyncio.get_running_loop()
+
+        # llama.create_completion(stream=True) is a sync generator. Pull each
+        # chunk on a worker thread and yield it back on the event loop.
+        def _start_stream():
+            return iter(
+                llama.create_completion(prompt=prompt, max_tokens=max_tokens, stream=True)
+            )
+
+        it = await loop.run_in_executor(None, _start_stream)
+        sentinel = object()
+        while True:
+            chunk = await loop.run_in_executor(None, lambda: next(it, sentinel))
+            if chunk is sentinel:
+                break
             delta = chunk["choices"][0].get("text")
             if delta:
                 yield delta

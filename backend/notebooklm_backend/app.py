@@ -1,37 +1,70 @@
 from __future__ import annotations
 
+import asyncio
+import contextlib
+import logging
+from typing import AsyncIterator
+
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 
 from .config import AppConfig, get_settings
-from .routes import health, chat, documents, rag, notebooks, metrics, speech, export, agent, conversations, zotero
+from .routes import (
+    agent,
+    chat,
+    conversations,
+    documents,
+    export,
+    health,
+    metrics,
+    notebooks,
+    rag,
+    speech,
+    zotero,
+)
+from .services.agent import AgentService
 from .services.chat import ChatService
+from .services.conversation_store import ConversationStore
 from .services.embeddings import create_embedding_backend
 from .services.ingestion import IngestionService
 from .services.llm import create_llm_backend
+from .services.metrics_store import MetricsStore
+from .services.model_profiles import resolve_ollama_model
+from .services.notebook_store import NotebookStore
 from .services.rag import RAGService
 from .services.rag_llamaindex import LlamaIndexRAGService
-from .services.vector_store import create_vector_store
-from .services.notebook_store import NotebookStore
-from .services.conversation_store import ConversationStore
-from .services.metrics_store import MetricsStore
 from .services.speech import SpeechService
-from .services.agent import AgentService
-from .services.model_profiles import resolve_ollama_model
+from .services.vector_store import create_vector_store
 
+logger = logging.getLogger(__name__)
 
 def create_app() -> FastAPI:
     """Create the FastAPI application for the chat-first Notebook LM backend."""
     settings: AppConfig = get_settings()
     settings.ensure_directories()
-    if settings.llm_provider == "ollama":
-        resolve_ollama_model(settings)
+
+    @contextlib.asynccontextmanager
+    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        # Resolve the preferred Ollama model in the background so a slow
+        # `/api/tags` round-trip doesn't delay startup and cause Electron's
+        # waitForBackend timeout to fire.
+        if settings.llm_provider == "ollama":
+            def _resolve() -> None:
+                try:
+                    resolve_ollama_model(settings)
+                except Exception:
+                    logger.exception("Background Ollama model resolution failed")
+
+            loop = asyncio.get_running_loop()
+            loop.run_in_executor(None, _resolve)
+        yield
 
     app = FastAPI(
         title="Offline Notebook LM",
         version="0.1.0",
         description="Local-first API for chatting with local models (Ollama) with RAG support.",
         contact={"name": "Offline Notebook LM Team"},
+        lifespan=lifespan,
     )
 
     # Bootstrap services

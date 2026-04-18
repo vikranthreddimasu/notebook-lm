@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Protocol
 
 from ..config import AppConfig
@@ -8,6 +9,11 @@ from ..config import AppConfig
 class EmbeddingBackend(Protocol):
     def embed(self, texts: list[str]) -> list[list[float]]:
         """Generate embeddings for a list of texts."""
+        ...
+
+    async def aembed(self, texts: list[str]) -> list[list[float]]:
+        """Async variant that must not block the event loop. Default
+        implementation offloads to the default executor."""
         ...
 
 
@@ -34,6 +40,14 @@ class SentenceTransformersBackend:
         embeddings = model.encode(texts, show_progress_bar=False)
         return embeddings.tolist()
 
+    async def aembed(self, texts: list[str]) -> list[list[float]]:
+        # model.encode is CPU-bound and can take 100-500ms; awaiting it
+        # synchronously freezes the event loop, making the backend
+        # unresponsive to health checks and concurrent fetches during
+        # ingestion. Push it to the default threadpool.
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self.embed, texts)
+
 
 class HashEmbeddingBackend:
     """Simple hash-based embedding for testing (not semantic)."""
@@ -41,13 +55,13 @@ class HashEmbeddingBackend:
     def embed(self, texts: list[str]) -> list[list[float]]:
         """Generate pseudo-embeddings using hashing."""
         import hashlib
-        
+
         embeddings = []
         for text in texts:
             # Create a 768-dim vector from hash
             hash_obj = hashlib.sha256(text.encode())
             hash_bytes = hash_obj.digest()
-            
+
             # Repeat hash to get 768 dimensions
             vector = []
             for i in range(768):
@@ -55,10 +69,14 @@ class HashEmbeddingBackend:
                 # Normalize to [-1, 1]
                 val = (hash_bytes[byte_idx] / 255.0) * 2 - 1
                 vector.append(val)
-            
+
             embeddings.append(vector)
-        
+
         return embeddings
+
+    async def aembed(self, texts: list[str]) -> list[list[float]]:
+        # Cheap enough to run inline — no executor hop needed.
+        return self.embed(texts)
 
 
 def create_embedding_backend(settings: AppConfig) -> EmbeddingBackend:

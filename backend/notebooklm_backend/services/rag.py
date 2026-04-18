@@ -49,7 +49,7 @@ class RAGService:
         metrics: dict[str, float] = {}
         # Stage 1: Query document summaries to find relevant documents
         stage1_start = time.perf_counter()
-        relevant_summaries = self.vector_store.query_document_summaries(
+        relevant_summaries = await self.vector_store.aquery_document_summaries(
             notebook_id=notebook_id,
             query=question,
             top_k=3,  # Get top 3 most relevant documents
@@ -76,7 +76,7 @@ class RAGService:
 
             for spath in selected_paths:
                 try:
-                    res = self.vector_store.query(
+                    res = await self.vector_store.aquery(
                         notebook_id=notebook_id,
                         query=question,
                         top_k=per_doc,
@@ -87,7 +87,7 @@ class RAGService:
                     dists = res.get("distances", [[]])[0] if res.get("distances") else []
                 except Exception:
                     # Fallback: unfiltered query + manual filter
-                    res = self.vector_store.query(notebook_id=notebook_id, query=question, top_k=per_doc * 2)
+                    res = await self.vector_store.aquery(notebook_id=notebook_id, query=question, top_k=per_doc * 2)
                     docs = res.get("documents", [[]])[0]
                     metas = res.get("metadatas", [[]])[0]
                     dists = res.get("distances", [[]])[0] if res.get("distances") else []
@@ -111,7 +111,9 @@ class RAGService:
         else:
             # Fallback to single-stage if no summaries available
             retrieval_start = time.perf_counter()
-            query_results = self.vector_store.query(notebook_id=notebook_id, query=question, top_k=max(top_k, 20))
+            query_results = await self.vector_store.aquery(
+                notebook_id=notebook_id, query=question, top_k=max(top_k, 20)
+            )
             metrics["retrieval_ms"] = (time.perf_counter() - retrieval_start) * 1000
             documents = query_results.get("documents", [[]])[0]
             metadatas = query_results.get("metadatas", [[]])[0]
@@ -214,7 +216,7 @@ class RAGService:
         metrics: dict[str, float] = {}
 
         retrieval_start = time.perf_counter()
-        query_results = self.vector_store.query_across_notebooks(
+        query_results = await self.vector_store.aquery_across_notebooks(
             notebook_ids=notebook_ids,
             query=question,
             top_k=top_k,

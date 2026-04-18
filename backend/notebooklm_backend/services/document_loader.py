@@ -81,19 +81,38 @@ def _load_pdf(file_path: Path) -> LoadedDocument:
     """Load PDF file using pypdf."""
     try:
         from pypdf import PdfReader
-        
+
         reader = PdfReader(str(file_path))
         text_parts = []
-        
+        page_count = 0
+
         for page in reader.pages:
+            page_count += 1
             page_text = page.extract_text()
             if page_text:
                 text_parts.append(page_text)
-        
+
         text = "\n\n".join(part for part in text_parts if part)
+
+        # Scanned PDFs (image-only, no embedded text) produce near-empty
+        # output. Previously we silently "succeeded" with 0 chunks and the
+        # user saw "no relevant documents found" on every query. Raise a
+        # clear error instead; the API turns this into a 400 with an
+        # actionable message.
+        MIN_CHARS_PER_PAGE = 40
+        expected_min = MIN_CHARS_PER_PAGE * max(1, page_count)
+        if len(text.strip()) < min(100, expected_min):
+            raise DocumentLoaderError(
+                "This PDF appears to be a scan (no embedded text). OCR isn't "
+                "supported yet — run the file through a tool like Adobe or "
+                "Preview's OCR first, then re-upload."
+            )
+
         return LoadedDocument(path=file_path, text=text)
     except ImportError:
         raise DocumentLoaderError("pypdf is required for PDF support")
+    except DocumentLoaderError:
+        raise
     except Exception as e:
         raise DocumentLoaderError(f"Failed to read PDF {file_path}: {e}")
 
