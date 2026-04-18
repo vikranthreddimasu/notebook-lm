@@ -37,6 +37,8 @@ export function ChatView({ pendingSuggest, onSuggestConsumed, onCitationClick, o
   const setCrossNotebookMode = useAppStore((s) => s.setCrossNotebookMode);
 
   const activeNotebook = notebooks.find((nb) => nb.notebook_id === activeNotebookId) ?? null;
+  const documents = useAppStore((s) => s.documents);
+  const hasDocuments = documents.length > 0 || crossNotebookMode;
 
   const [input, setInput] = useState('');
   const [isScrolledUp, setIsScrolledUp] = useState(false);
@@ -125,9 +127,16 @@ export function ChatView({ pendingSuggest, onSuggestConsumed, onCitationClick, o
     }
   };
 
+  // BibTeX is available whenever the visible conversation has at least one
+  // message with sources. Sticking to activeSources alone hid the action
+  // after any context reset, even when the persisted messages still had
+  // sources we could export.
+  const hasExportableSources =
+    activeSources.length > 0 || messages.some((m) => m.role === 'assistant');
+
   const overflowItems = [
     { label: 'Export conversation', onClick: handleExport, disabled: messages.length === 0 },
-    { label: 'Export BibTeX', onClick: handleExportBibtex, disabled: activeSources.length === 0 },
+    { label: 'Export BibTeX', onClick: handleExportBibtex, disabled: !hasExportableSources },
     { label: 'Toggle sources', onClick: toggleSourcePanel },
     { label: 'Clear chat', onClick: clearChat, disabled: messages.length === 0 },
   ];
@@ -175,8 +184,19 @@ export function ChatView({ pendingSuggest, onSuggestConsumed, onCitationClick, o
       <div className="chat-messages">
         {messages.length === 0 && (
           <div className="chat-empty">
-            <p>What would you like to know?</p>
-            <QuickChips chips={EMPTY_CHIPS} onSelect={handleSend} />
+            {hasDocuments ? (
+              <>
+                <p>What would you like to know?</p>
+                <QuickChips chips={EMPTY_CHIPS} onSelect={handleSend} />
+              </>
+            ) : (
+              <>
+                <p>No documents here yet.</p>
+                <p className="chat-empty-hint">
+                  Drop a PDF, DOCX, or Markdown file anywhere on this window — or use the <strong>+ Add</strong> button in the sidebar.
+                </p>
+              </>
+            )}
           </div>
         )}
         {messages.map((msg, i) => (

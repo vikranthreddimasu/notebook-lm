@@ -16,6 +16,7 @@ import { KeyboardShortcutsOverlay } from '../ui/KeyboardShortcuts';
 import { ZoteroImportDialog } from '../ui/ZoteroImport';
 import type { SourceChunk } from '../../types';
 import { humanizeError } from '../../utils/errorMessages';
+import { usePaneResize } from '../../hooks/usePaneResize';
 import './layout.css';
 
 function isWizardComplete(): boolean {
@@ -40,6 +41,21 @@ export function AppShell() {
   // Shared between SourcePanel card-hover and MessageBubble citation-hover so
   // the two-way link between a sentence and its source card is visible.
   const [hoveredSourceIndex, setHoveredSourceIndex] = useState<number | null>(null);
+
+  const sidebarResize = usePaneResize({
+    storageKey: 'notebook-lm-sidebar-width',
+    min: 200,
+    max: 420,
+    from: 'left',
+    initial: 240,
+  });
+  const sourcePanelResize = usePaneResize({
+    storageKey: 'notebook-lm-source-panel-width',
+    min: 240,
+    max: 520,
+    from: 'right',
+    initial: 280,
+  });
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -71,8 +87,17 @@ export function AppShell() {
         useAppStore.getState().newChat();
         return;
       }
-      // ? — keyboard shortcuts (only when not typing in an input)
-      if (e.key === '?' && !paletteOpen) {
+      // ⌘-Shift-/ — keyboard shortcuts overlay. The bare `?` form used to
+      // be blocked whenever the chat textarea had focus (which is almost
+      // always), so the shortcut was effectively unreachable. A modifier
+      // shortcut is always reachable. The bare ? still works when no text
+      // input is focused.
+      if (e.metaKey && e.shiftKey && e.key === '?') {
+        e.preventDefault();
+        setShortcutsOpen((v) => !v);
+        return;
+      }
+      if (e.key === '?' && !paletteOpen && !e.metaKey && !e.ctrlKey) {
         const tag = (e.target as HTMLElement)?.tagName;
         if (tag !== 'INPUT' && tag !== 'TEXTAREA') {
           e.preventDefault();
@@ -238,8 +263,15 @@ export function AppShell() {
 
   return (
     <>
-      <div className="app-shell">
+      <div
+        className="app-shell"
+        style={{
+          ['--sidebar-width' as string]: `${sidebarResize.width}px`,
+          ['--source-panel-width' as string]: `${sourcePanelResize.width}px`,
+        }}
+      >
         <Sidebar onOpenZotero={() => setZoteroOpen(true)} />
+        <div className="pane-resizer" aria-label="Resize sidebar" {...sidebarResize.handleProps} />
         <ChatView
           pendingSuggest={pendingSuggest}
           onSuggestConsumed={() => setPendingSuggest(null)}
@@ -248,6 +280,11 @@ export function AppShell() {
             openSource(source);
           }}
           onCitationHover={setHoveredSourceIndex}
+        />
+        <div
+          className="pane-resizer"
+          aria-label="Resize sources panel"
+          {...sourcePanelResize.handleProps}
         />
         <SourcePanel
           onSourceClick={(source) => openSource(source)}

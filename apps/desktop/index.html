@@ -5,8 +5,12 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="preconnect" href="https://fonts.bunny.net" crossorigin />
+    <!-- Variable-axis weight range lets us use 450/550 (mid-weights) used in
+         a few UI components. Without the axis syntax Bunny Fonts serves only
+         the discrete weights listed, and browsers would round 450/550 to the
+         nearest defined weight. -->
     <link
-      href="https://fonts.bunny.net/css?family=instrument-serif:400,400i|plus-jakarta-sans:400,500,600,700|geist-mono:400,500&display=swap"
+      href="https://fonts.bunny.net/css?family=instrument-serif:400,400i|plus-jakarta-sans:wght@200..800|geist-mono:wght@100..900&display=swap"
       rel="stylesheet"
     />
     <title>Notebook LM</title>

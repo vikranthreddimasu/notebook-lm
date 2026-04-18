@@ -203,7 +203,6 @@ class ChatService:
         metrics["llm_ms"] = (time.perf_counter() - llm_start) * 1000
         metrics["total_ms"] = metrics.get("total_ms", 0.0) + metrics["llm_ms"]
         final_reply = "".join(aggregated).strip()
-        final_reply = "".join(aggregated).strip()
         source_count = len(rag_context.sources) if rag_context else None
         self._record_metrics(prompt, notebook_id, metrics, source_count=source_count)
         yield {

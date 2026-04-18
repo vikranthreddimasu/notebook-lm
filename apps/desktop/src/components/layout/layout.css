@@ -7,6 +7,31 @@
   background: var(--color-bg-primary);
 }
 
+/* Drag handle between panes. Invisible until hover so the default look
+ * matches the pre-resize app. Expands to 3px with a sage tint on hover so
+ * the affordance is obvious once the user moves the cursor there. */
+.pane-resizer {
+  flex-shrink: 0;
+  width: 3px;
+  margin: 0 -1px;
+  cursor: col-resize;
+  background: transparent;
+  -webkit-app-region: no-drag;
+  transition: background var(--duration-fast) var(--ease-out);
+  position: relative;
+  z-index: 1;
+}
+
+.pane-resizer:hover,
+.pane-resizer:focus-visible {
+  background: var(--color-accent-subtle);
+}
+
+.pane-resizer:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1px var(--color-accent);
+}
+
 /* ---- Sidebar ---- */
 
 .sidebar {
@@ -755,7 +780,7 @@
   z-index: 1000;
   background: var(--color-bg-elevated);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-card);
+  border-radius: var(--radius-modal);
   box-shadow: var(--shadow-lg);
   padding: var(--space-1);
   min-width: 160px;
